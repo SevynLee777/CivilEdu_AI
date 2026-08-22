@@ -1,4 +1,4 @@
 @echo off
 echo Starting Exam_TutorAI...
-python force_launch.py
+"C:\Users\awen8\AppData\Local\Programs\Python\Python311\python.exe" force_launch.py
 pause

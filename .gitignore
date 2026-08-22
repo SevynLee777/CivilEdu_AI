@@ -22,5 +22,14 @@ env/
 .vscode/
 .idea/
 
+# Student logs and backups
+student_logs/
+backups/
+
+# Archive downloaded binaries and temp files
+archive_tools/downloaded_pdfs/
+archive_tools/temp_docs/
+*.zip
+
 # Windows thumbs
 Thumbs.db
