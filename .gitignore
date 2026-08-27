@@ -10,8 +10,8 @@ materials/
 *.py[cod]
 *$py.class
 
-# Streamlit config (optional, but usually local dev config shouldn't force override cloud)
-.streamlit/
+# Streamlit secrets (Do not push secrets to git)
+.streamlit/secrets.toml
 
 # Virtual Environment
 .venv/

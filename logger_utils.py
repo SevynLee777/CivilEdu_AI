@@ -12,7 +12,7 @@ def ensure_log_dir():
 def get_student_file_path(student_info):
     ensure_log_dir()
     class_name = str(student_info.get("class_name", "801")).strip()
-    seat_num = str(student_info.get("seat_num", "1")).strip()
+    seat_num = str(student_info.get("seat_num", "01")).strip()
     name = str(student_info.get("name", "學生")).strip()
     
     filename = f"{class_name}_{seat_num}_{name}.json"
@@ -29,9 +29,8 @@ def load_student_record(student_info):
             
     return {
         "student_info": student_info,
-        "diagnostic": None,
-        "mastery_tests": [],
-        "remedial_views": [],
+        "unit_progress": {},
+        "practice_history": [],
         "ai_chats": [],
         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -47,51 +46,78 @@ def save_student_record(record):
     except Exception as e:
         print(f"[Error] Failed to save student log {filepath}: {e}")
 
-def save_student_profile(student_info, diagnostic_result):
+def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_tags, weak_tags):
+    """
+    Records a student's practice result in a unit.
+    Calculates status:
+    - 🌳 已掌握 (pct >= 80%)
+    - 🌿 再練習 (50% <= pct < 80%)
+    - 🌱 再看看 (pct < 50%)
+    """
     record = load_student_record(student_info)
-    record["student_info"] = student_info
-    record["diagnostic"] = {
-        "score": diagnostic_result.get("score", 0),
-        "level": diagnostic_result.get("level", "Level B"),
-        "level_name": diagnostic_result.get("level_name", "🌿 觀念進階型"),
-        "completed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_student_record(record)
+    pct = (score / total * 100) if total > 0 else 0
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if pct >= 80:
+        status = "🌳 已掌握"
+    elif pct >= 50:
+        status = "🌿 再練習"
+    else:
+        status = "🌱 再看看"
 
-def log_mastery_test(student_info, topic, score, total, pct, mastery_level, weak_tags, sa_responses):
-    record = load_student_record(student_info)
-    entry = {
-        "topic": topic,
+    if "unit_progress" not in record:
+        record["unit_progress"] = {}
+        
+    prev_progress = record["unit_progress"].get(unit_id, {})
+    practice_count = prev_progress.get("practice_count", 0) + 1
+    
+    record["unit_progress"][unit_id] = {
+        "unit_id": unit_id,
+        "unit_title": unit_title,
+        "status": status,
+        "score": score,
+        "total": total,
+        "score_pct": round(pct, 1),
+        "mastered_tags": mastered_tags,
+        "weak_tags": weak_tags,
+        "practice_count": practice_count,
+        "last_updated": now_str
+    }
+    
+    if "practice_history" not in record:
+        record["practice_history"] = []
+        
+    record["practice_history"].append({
+        "unit_id": unit_id,
+        "unit_title": unit_title,
         "score": score,
         "total": total,
         "pct": round(pct, 1),
-        "mastery_level": mastery_level,  # "🟢 精熟級", "🟡 基礎級", "🔴 待加強"
+        "status": status,
         "weak_tags": weak_tags,
-        "sa_responses": sa_responses,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    record["mastery_tests"].append(entry)
+        "timestamp": now_str
+    })
+    
     save_student_record(record)
+    return status
 
-def log_remedial_view(student_info, topic, level):
+def log_ai_chat(student_info, unit_title, question, answer):
     record = load_student_record(student_info)
-    entry = {
-        "topic": topic,
-        "level": level,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    record["remedial_views"].append(entry)
-    save_student_record(record)
-
-def log_ai_chat(student_info, question, answer):
-    record = load_student_record(student_info)
-    entry = {
+    if "ai_chats" not in record:
+        record["ai_chats"] = []
+    record["ai_chats"].append({
+        "unit_title": unit_title,
         "question": question,
         "answer": answer,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    record["ai_chats"].append(entry)
+    })
     save_student_record(record)
+
+def get_student_footprint(student_info):
+    """Returns the student's personal learning footprints without any class rankings."""
+    record = load_student_record(student_info)
+    unit_progress = record.get("unit_progress", {})
+    return list(unit_progress.values())
 
 def get_all_student_records():
     ensure_log_dir()
@@ -110,34 +136,120 @@ def get_all_student_records():
                 print(f"[Error] Failed reading {fpath}: {e}")
     return records
 
+def get_teacher_learning_summary():
+    """
+    Builds clean, actionable summary for the teacher:
+    - Completed today count (今天完成學習的學生數)
+    - Need attention count (可能需要老師關心的學生數)
+    - Concepts mastered well (學生們學習順利的觀念)
+    - Concepts needing improvement (學生們需要加強學習的觀念)
+    - Student details list (詳細資料)
+    """
+    records = get_all_student_records()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    completed_today_students = set()
+    students_needing_attention = []
+    
+    smooth_concept_counts = {}
+    weak_concept_counts = {}
+    
+    student_details = []
+    
+    for r in records:
+        info = r.get("student_info", {})
+        unit_prog = r.get("unit_progress", {})
+        practice_hist = r.get("practice_history", [])
+        last_active = r.get("last_active", "")
+        
+        # Check if active/practiced today
+        practiced_today = False
+        for p in practice_hist:
+            if p.get("timestamp", "").startswith(today_str):
+                practiced_today = True
+                break
+        if not practiced_today and last_active.startswith(today_str) and unit_prog:
+            practiced_today = True
+            
+        student_key = f"{info.get('class_name','')}_{info.get('seat_num','')}_{info.get('name','')}"
+        if practiced_today:
+            completed_today_students.add(student_key)
+            
+        # Collect concepts & check attention need
+        student_weak_concepts = set()
+        student_has_struggle = False
+        total_practices = 0
+        
+        for uid, prog in unit_prog.items():
+            status = prog.get("status", "")
+            total_practices += prog.get("practice_count", 1)
+            
+            if "🌱" in status or "再看看" in status:
+                student_has_struggle = True
+            for m_tag in prog.get("mastered_tags", []):
+                smooth_concept_counts[m_tag] = smooth_concept_counts.get(m_tag, 0) + 1
+            for w_tag in prog.get("weak_tags", []):
+                weak_concept_counts[w_tag] = weak_concept_counts.get(w_tag, 0) + 1
+                student_weak_concepts.add(w_tag)
+                
+        if student_has_struggle or len(student_weak_concepts) >= 2:
+            students_needing_attention.append({
+                "info": info,
+                "weak_concepts": list(student_weak_concepts),
+                "last_active": last_active
+            })
+            
+        student_details.append({
+            "class_name": info.get("class_name", ""),
+            "seat_num": info.get("seat_num", ""),
+            "name": info.get("name", ""),
+            "completed_units_count": len(unit_prog),
+            "unit_progress": unit_prog,
+            "weak_concepts": list(student_weak_concepts),
+            "total_practices": total_practices,
+            "last_active": last_active
+        })
+        
+    # Sort concept rankings
+    sorted_smooth = sorted(smooth_concept_counts.items(), key=lambda x: x[1], reverse=True)
+    sorted_weak = sorted(weak_concept_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    # Sort student details by class and seat
+    student_details.sort(key=lambda x: (str(x["class_name"]), str(x["seat_num"]).zfill(2)))
+    
+    return {
+        "total_students": len(records),
+        "completed_today_count": len(completed_today_students),
+        "need_attention_count": len(students_needing_attention),
+        "students_needing_attention": students_needing_attention,
+        "smooth_concepts": [tag for tag, cnt in sorted_smooth[:5]],
+        "weak_concepts": [tag for tag, cnt in sorted_weak[:5]],
+        "student_details": student_details
+    }
+
 def generate_csv_report():
+    """Exports structured student progress report for teacher."""
     records = get_all_student_records()
     rows = []
     for r in records:
         info = r.get("student_info", {})
-        diag = r.get("diagnostic") or {}
-        tests = r.get("mastery_tests", [])
+        prog = r.get("unit_progress", {})
         chats = r.get("ai_chats", [])
-        remedials = r.get("remedial_views", [])
         
-        latest_test = tests[-1] if tests else {}
-        avg_score_pct = round(sum(t.get("pct", 0) for t in tests) / len(tests), 1) if tests else 0
-        weak_tags_str = ", ".join(latest_test.get("weak_tags", [])) if latest_test.get("weak_tags") else "無明顯弱點"
-        
+        unit_summary_list = []
+        all_weaks = []
+        for uid, p in prog.items():
+            unit_summary_list.append(f"{p.get('unit_title','')}: {p.get('status','')} (練習{p.get('practice_count',1)}次)")
+            all_weaks.extend(p.get("weak_tags", []))
+            
         rows.append({
             "班級": info.get("class_name", ""),
             "座號": info.get("seat_num", ""),
             "姓名": info.get("name", ""),
-            "起點前測得分": diag.get("score", ""),
-            "起點評定等級": diag.get("level_name", ""),
-            "已自主檢測單元數": len(tests),
-            "最新檢測單元": latest_test.get("topic", "尚未檢測"),
-            "最新精熟狀態": latest_test.get("mastery_level", "未檢測"),
-            "最新選擇題得分": f"{latest_test.get('score', 0)}/{latest_test.get('total', 0)}" if latest_test else "未檢測",
-            "平均檢測正確率(%)": avg_score_pct,
-            "需補強觀念標籤": weak_tags_str,
-            "補強教材閱讀次數": len(remedials),
-            "AI隨問隨答次數": len(chats),
+            "已完成學習單元數": len(prog),
+            "各單元掌握狀態": "；".join(unit_summary_list) if unit_summary_list else "尚未練習",
+            "尚未掌握的學習重點": "、".join(set(all_weaks)) if all_weaks else "無（觀念掌握良好）",
+            "AI助教提問次數": len(chats),
             "最後活動時間": r.get("last_active", "")
         })
         

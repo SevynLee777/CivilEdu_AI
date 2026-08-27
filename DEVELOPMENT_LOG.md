@@ -67,24 +67,42 @@
 ### 🔹 階段 7：版本備份 (`11507版`)
 * 完成備份資料夾 `backup_11507版/` 與壓縮檔 `11507版.zip` (約 4.08 MB)。
 
+### 🔹 階段 8：講義重點摘要、Mermaid 觀念心智圖與雲端部署 (2026-08-22)
+* **講義重點摘要與心智圖引擎 (`app.py`)**：
+  * 新增 `generate_summary_and_mindmap()`，直接讀取 `materials/` 講義內容，生成 1 分鐘重點濃縮摘要與觀念避坑卡片。
+  * 整合 Mermaid `graph TD` 語法，自動將講義章節與生活實例繪製為視覺化樹狀心智圖。
+* **頁面結構雙子頁籤重構**：
+### 🔹 階段 9：全新使用流程與自動化學習系統重構 (2026-08-27)
+* **整體架構重塑**：
+  * 貫徹「教師極簡 3 步驟新增，系統全自動生成」與「學生無壓力自主學習」原則。
+* **教師端（我的教材 + 學習狀況）**：
+  * **我的教材**：新增教材只需「輸入單元名稱 ➔ 貼上課本內容 ➔ 按下『建立學習單元』」，AI 自動萃取重點、整理白話內容、建立生活案例、題目與答錯補救說明，一鍵直接發布。支援查看、修改與刪除。
+  * **學習狀況**：首頁直觀顯示「今天有 X 位學生完成學習」、「其中 Y 位學生可能需要老師關心」以及全班學習順利/需加強的觀念排行；點選展開學生個別詳細進度並支援匯出 Excel (CSV)。
+* **學生端（開始學習 + 小試身手 + 我的足跡）**：
+  * **開始學習**：閱讀萃取重點、白話課文、生活化案例與 Mermaid 視覺化心智圖。
+  * **小試身手**：生活化概念練習，去化「考試」壓力；自動評定 `🌱 再看看` / `🌿 再練習` / `🌳 已掌握`，動態展開白話補強、生活比喻與避坑口訣。
+  * **我的足跡**：記錄個人各單元掌握狀態與成長足跡，絕不顯示班級排名。
+* **新增核心模組**：
+  * [unit_manager.py](file:///C:/Users/awen8/Exam_TutorAI/unit_manager.py)：學習單元全生命週期管理與 AI 自動包裹生成引擎。
+  * [logger_utils.py](file:///C:/Users/awen8/Exam_TutorAI/logger_utils.py)：重構為無壓力足跡追蹤與教師關懷摘要統計。
+
 ---
 
 ## 📂 三、 系統檔案結構總覽
 
 | 檔案/資料夾名稱 | 類型 | 說明 |
 | :--- | :--- | :--- |
-| [app.py](file:///C:/Users/awen8/Exam_TutorAI/app.py) | Python 主程式 | Streamlit 介面、適性測驗邏輯、學習前測與教師後台 |
-| [data_loader.py](file:///C:/Users/awen8/Exam_TutorAI/data_loader.py) | 模組 | 載入與解析 `materials/` 中的 `.docx` 八年級公民講義 |
-| [logger_utils.py](file:///C:/Users/awen8/Exam_TutorAI/logger_utils.py) | 模組 | 學生學習歷程 JSON 寫入、讀取與 CSV 報表生成 |
+| [app.py](file:///C:/Users/awen8/Exam_TutorAI/app.py) | Python 主程式 | Streamlit 介面（學生端/教師端身分切換與學習流程） |
+| [unit_manager.py](file:///C:/Users/awen8/Exam_TutorAI/unit_manager.py) | 核心模組 | 學習單元管理、AI 自動分析與生成重點、案例、題目與補救 |
+| [logger_utils.py](file:///C:/Users/awen8/Exam_TutorAI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成 |
+| [units_db.json](file:///C:/Users/awen8/Exam_TutorAI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、案例、題目、心智圖） |
 | [config.json](file:///C:/Users/awen8/Exam_TutorAI/config.json) | 設定檔 | 設定國中八年級公民科目名稱與 AI 助教角色 |
-| [question_bank.json](file:///C:/Users/awen8/Exam_TutorAI/question_bank.json) | 資料庫 | 國中八年級公民會考/段考擬真題庫 |
-| [materials/](file:///C:/Users/awen8/Exam_TutorAI/materials) | 資料夾 | 轉換後之八上公民講義 `.docx` 檔案 |
 | [student_logs/](file:///C:/Users/awen8/Exam_TutorAI/student_logs) | 資料夾 | 學生個人學習歷程 JSON 日誌 |
-| [11507版.zip](file:///C:/Users/awen8/Exam_TutorAI/11507版.zip) | 備份檔 | 11507 版完整系統備份壓縮檔 |
 | [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/Exam_TutorAI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程紀錄檔 |
 
 ---
 
-## 🎯 四、 未來維護與擴充建議
-1. **講義續擴**：後續若拿到「八下」或「九年級」講義 `.docx` 檔案，只需直接放進 `materials/` 資料夾，並在 `data_loader.py` 設定對應選單即可自動載入。
-2. **題庫擴充**：若要新增題庫，可直接於 `question_bank.json` 中追加題目物件。
+## 🎯 四、 維護與操作指引
+1. **本地啟動**：執行 `python -m streamlit run app.py` 或點擊 `run.bat`。
+2. **教師建立單元**：切換至教師端 ➔ 點開「➕ 新增學習單元」 ➔ 貼上內容並點擊「🚀 建立學習單元」。
+3. **學生學習**：切換至學生端 ➔ 選擇班級座號 ➔ 選擇單元開始學習與小試身手。
