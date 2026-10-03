@@ -3,7 +3,8 @@ import json
 import re
 import uuid
 from datetime import datetime
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,11 +13,10 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "units_db.json")
 
 # Candidate models for fallback
 CANDIDATE_MODELS = [
-    'gemini-3.5-flash',
-    'gemini-3.6-flash',
-    'gemini-flash-latest',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
     'gemini-pro-latest'
 ]
 
@@ -32,19 +32,22 @@ def get_api_key():
 
 def call_gemini_api(prompt, is_json=False):
     api_key = get_api_key()
-    if api_key:
-        genai.configure(api_key=api_key)
-    
+    if not api_key:
+        raise ValueError("未設定 GEMINI_API_KEY，無法呼叫 Gemini API。")
+
+    client = genai.Client(api_key=api_key)
     last_exception = None
-    generation_config = {"response_mime_type": "application/json"} if is_json else None
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json"
+    ) if is_json else None
 
     for m_name in CANDIDATE_MODELS:
         try:
-            model = genai.GenerativeModel(m_name)
-            if generation_config:
-                res = model.generate_content(prompt, generation_config=generation_config)
-            else:
-                res = model.generate_content(prompt)
+            res = client.models.generate_content(
+                model=m_name,
+                contents=prompt,
+                config=config
+            )
             return res.text
         except Exception as e:
             last_exception = e
@@ -83,13 +86,13 @@ def generate_unit_bundle(title, raw_content):
     1. Key learning points (萃取學習重點)
     2. Easy plain-language content (國中生白話整理)
     3. Life & campus cases (生活化案例)
-    4. Mermaid concept mind map (心智圖)
-    5. Practice questions (小試身手練習題)
-    6. Remediation guides (答錯補充說明與避坑指南)
+    4. Mermaid concept mind map (直式樹狀心智圖，以 graph LR 由左至右直向延伸展開)
+    5. Practice questions (小試身手練習題，請出滿 8 道題目，編號 q1 至 q8)
+    6. Remediation guides (答錯補充說明與避坑指南，涵蓋練習題涉及之核心觀念標籤)
     """
     prompt = f"""
 你是一位充滿教學熱忱、深諳國中八年級學生語言的【公民科名師】。
-教師剛剛輸入了課本教材（單元名稱：【{title}】），請依據此教材，以「國中生容易理解、生活化、無壓力」為原則，為系統自動產生完整的學習單元包裹。
+教師剛剛輸入了課本教材（單元名稱：【{title}】），請依據此教材，以「國中生容易理解、生活化、無壓力」為原則，為系統自動產生完整的學習單元包裹。小試身手題庫請出滿 8 道生活情境單選題（q1 至 q8）。
 
 【課本教材原文】：
 {raw_content[:12000]}
@@ -115,12 +118,12 @@ def generate_unit_bundle(title, raw_content):
       "takeaway": "💡 概念小啟發：一句話總結。"
     }}
   ],
-  "mindmap_mermaid": "graph TD\\n  A[\"{title}\"] --> B[\"核心概念一\"]\\n  A --> C[\"核心概念二\"]\\n  B --> D[\"生活實例/重點細節\"]\\n  C --> E[\"生活實例/重點細節\"]",
+  "mindmap_mermaid": "graph LR\\n  A[\"{title}\"] --> B[\"核心概念一\"]\\n  A --> C[\"核心概念二\"]\\n  B --> D[\"生活實例/重點細節\"]\\n  C --> E[\"生活實例/重點細節\"]",
   "practice_questions": [
     {{
       "id": "q1",
       "concept_tag": "核心觀念標籤（如：國家要素、民主政治原則、憲法位階等）",
-      "question": "生活情境式的單選練習題（適合小試身手，難度適中）",
+      "question": "生活情境式的單選練習題（第1題，適合小試身手，難度適中）",
       "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
       "correct_index": 0,
       "explanation": "親切簡短的解析，說明為何選這個答案。"
@@ -128,7 +131,7 @@ def generate_unit_bundle(title, raw_content):
     {{
       "id": "q2",
       "concept_tag": "核心觀念標籤",
-      "question": "第二題題目",
+      "question": "第2題題目",
       "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
       "correct_index": 1,
       "explanation": "解析說明"
@@ -136,7 +139,7 @@ def generate_unit_bundle(title, raw_content):
     {{
       "id": "q3",
       "concept_tag": "核心觀念標籤",
-      "question": "第三題題目",
+      "question": "第3題題目",
       "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
       "correct_index": 2,
       "explanation": "解析說明"
@@ -144,7 +147,39 @@ def generate_unit_bundle(title, raw_content):
     {{
       "id": "q4",
       "concept_tag": "核心觀念標籤",
-      "question": "第四題題目",
+      "question": "第4題題目",
+      "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
+      "correct_index": 3,
+      "explanation": "解析說明"
+    }},
+    {{
+      "id": "q5",
+      "concept_tag": "核心觀念標籤",
+      "question": "第5題題目",
+      "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
+      "correct_index": 0,
+      "explanation": "解析說明"
+    }},
+    {{
+      "id": "q6",
+      "concept_tag": "核心觀念標籤",
+      "question": "第6題題目",
+      "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
+      "correct_index": 1,
+      "explanation": "解析說明"
+    }},
+    {{
+      "id": "q7",
+      "concept_tag": "核心觀念標籤",
+      "question": "第7題題目",
+      "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
+      "correct_index": 2,
+      "explanation": "解析說明"
+    }},
+    {{
+      "id": "q8",
+      "concept_tag": "核心觀念標籤",
+      "question": "第8題題目",
       "options": ["A) 選項一", "B) 選項二", "C) 選項三", "D) 選項四"],
       "correct_index": 3,
       "explanation": "解析說明"
@@ -194,7 +229,7 @@ def get_default_fallback_bundle(title, raw_content):
                 "takeaway": "💡 觀念落實於生活中，就是最好的公民實踐！"
             }
         ],
-        "mindmap_mermaid": f"""graph TD
+        "mindmap_mermaid": f"""graph LR
   A["{title}"] --> B["核心觀念"]
   A --> C["生活實踐"]
   B --> D["重點理解"]
@@ -212,6 +247,97 @@ def get_default_fallback_bundle(title, raw_content):
                 ],
                 "correct_index": 0,
                 "explanation": "現代民主法治的核心即為尊重多元意見、遵守共同規範，並透過溝通達成共識。"
+            },
+            {
+                "id": "q2",
+                "concept_tag": f"{title}核心觀念",
+                "question": f"在探討【{title}】時，我們若要在團體生活中達成共識，最適當的做法為何？",
+                "options": [
+                    "A) 強制所有人接受單一意見",
+                    "B) 透過理性對話與少數服從多數原則",
+                    "C) 逃避問題不進行任何討論",
+                    "D) 由身分地位最高者直接指定"
+                ],
+                "correct_index": 1,
+                "explanation": "民主社會透過理性溝通討論與少數服從多數、多數尊重少數原則達成共識。"
+            },
+            {
+                "id": "q3",
+                "concept_tag": f"{title}生活實踐",
+                "question": f"下列哪一種校園情境，最能具體落實【{title}】所強調的公民自律與合作精神？",
+                "options": [
+                    "A) 共同訂定班規並切實遵守執行",
+                    "B) 私下違反校規只要沒被抓到就好",
+                    "C) 將公共環境清潔責任全推給值日生",
+                    "D) 選出幹部後便不再關心班級公共事務"
+                ],
+                "correct_index": 0,
+                "explanation": "公民自治的基礎在於共同制定規範、共同參與並以自律精神維護團體秩序。"
+            },
+            {
+                "id": "q4",
+                "concept_tag": f"{title}生活實踐",
+                "question": f"遇到公共議題看法不同時，具備【{title}】素養的同學通常會採取何種態度？",
+                "options": [
+                    "A) 在網路上使用情緒化文字互相謾罵",
+                    "B) 傾聽對方的論據並以客觀事實論證",
+                    "C) 聯合其他朋友排擠意見不同者",
+                    "D) 拒絕接受任何不同的觀點"
+                ],
+                "correct_index": 1,
+                "explanation": "面對不同觀點，理性傾聽、尊重包容並依據事實溝通是優質公民的必備素養。"
+            },
+            {
+                "id": "q5",
+                "concept_tag": f"{title}核心觀念",
+                "question": f"下列何者最能說明【{title}】中「權利與義務」之間的關係？",
+                "options": [
+                    "A) 只要享受權利，不需要承擔任何義務",
+                    "B) 權利與義務互為表裡，享受權利同時應盡相應責任",
+                    "C) 義務是給弱勢群體承擔，強者享有完全自由",
+                    "D) 權利可以無限擴張，不受任何法律限制"
+                ],
+                "correct_index": 1,
+                "explanation": "現代公民社會強調權利與義務相對等，個人的自由以不妨礙他人之自由為界線。"
+            },
+            {
+                "id": "q6",
+                "concept_tag": f"{title}生活實踐",
+                "question": f"在民主法治架構下，若發現既有規範有未盡完善之處，最適當的解決途徑為何？",
+                "options": [
+                    "A) 直接聚眾鬧事破壞現有體制",
+                    "B) 依正當合法管道提出建言與修改討論",
+                    "C) 假裝沒看見並放棄自己的權益",
+                    "D) 私下私了不遵循法律途徑"
+                ],
+                "correct_index": 1,
+                "explanation": "法治精神在於遵循正當法律程序，若制度有不足應透過法定救濟或修法管道反映。"
+            },
+            {
+                "id": "q7",
+                "concept_tag": f"{title}核心觀念",
+                "question": f"在【{title}】的原則中，關於「公平正義」的體現，下列何者敘述最正確？",
+                "options": [
+                    "A) 給予所有人完全一模一樣的待遇，不論個別需求",
+                    "B) 在合理條件下兼顧實質平等，保障弱勢基本需求",
+                    "C) 優勝劣汰，完全不提供任何社會救助",
+                    "D) 只照顧特定族群，忽視多數人權益"
+                ],
+                "correct_index": 1,
+                "explanation": "公平正義不僅強調形式平等，更重視實質平等，給予弱勢群體適當保障以實現社會公平。"
+            },
+            {
+                "id": "q8",
+                "concept_tag": f"{title}生活實踐",
+                "question": f"落實【{title}】之核心素養，最重要的日常實踐起點為何？",
+                "options": [
+                    "A) 從身邊的校園與家庭生活中的尊重與守法做起",
+                    "B) 等到長大成年後才需要關心公共事務",
+                    "C) 只要考試得高分，生活行徑無需受到規範",
+                    "D) 將所有責任託付給政府，個人不必參與"
+                ],
+                "correct_index": 0,
+                "explanation": "公民素養是由內而外、從日常生活做起的實踐歷程，每位同學都能從生活同儕互動中展現公民精神。"
             }
         ],
         "remediation_guides": {
@@ -264,7 +390,7 @@ def get_builtin_default_units():
                     "takeaway": "💡 主權對外獨立，讓國民在國際上擁有明確的法律地位與保護。"
                 }
             ],
-            "mindmap_mermaid": """graph TD
+            "mindmap_mermaid": """graph LR
   A["第1課：國家與民主政治"] --> B["國家的四大要素"]
   A --> C["民主政治四大原則"]
   B --> B1["人民 (國民群體)"]
@@ -307,6 +433,38 @@ def get_builtin_default_units():
                     "options": ["A) 責任政治", "B) 政黨政治", "C) 法治政治 (依法行政)", "D) 利益團體"],
                     "correct_index": 2,
                     "explanation": "政府與人民皆須遵守法律規範，政府施政必須依法有據，稱為「法治政治」。"
+                },
+                {
+                    "id": "q5",
+                    "concept_tag": "政黨政治",
+                    "question": "民主國家中通常有多個政黨並存，各黨提出不同政見爭取選民支持，執政黨若施政不當，在野黨可強力監督與競爭。這項機制最能體現下列何種民主政治原則？",
+                    "options": ["A) 政黨政治 (良性競爭與政權輪替)", "B) 神權政治", "C) 寡頭政治", "D) 專制政治"],
+                    "correct_index": 0,
+                    "explanation": "民主政治鼓勵多黨良性競爭，在野黨監督執政黨並透過和平選舉進行政權輪替，此為「政黨政治」的核心精神。"
+                },
+                {
+                    "id": "q6",
+                    "concept_tag": "國家要素",
+                    "question": "關於國家組成要素中「領土」的範圍，下列何者的敘述最為完整且正確？",
+                    "options": ["A) 僅包含陸地表面（領陸）", "B) 包含領陸、領海（通常為沿海12浬）及其垂直上空的領空", "C) 只要本國軍艦開得到的所有公海海域", "D) 包含所有與我國簽署貿易協定的國家土地"],
+                    "correct_index": 1,
+                    "explanation": "國家領土包括領陸、領海（主權及於領海及其底土）以及領陸與領海之垂直上空（領空）。"
+                },
+                {
+                    "id": "q7",
+                    "concept_tag": "主權在民",
+                    "question": "我國國民年滿規定年齡依法享有選舉投票權，能以「頭家」身分共同決定國家領導人與民意代表。這種權力來源的理念被稱為何者？",
+                    "options": ["A) 君權神授", "B) 主權在民 (民意政治根基)", "C) 寡頭政治", "D) 貴族世襲"],
+                    "correct_index": 1,
+                    "explanation": "「主權在民」主張國家的最高權力屬於全體國民，人民是國家真正的主人，政府的統治正當性來自人民授權。"
+                },
+                {
+                    "id": "q8",
+                    "concept_tag": "責任政治",
+                    "question": "在民主國家中，政務官與事務官（常任文官）在責任承擔上有何不同？下列敘述何者正確？",
+                    "options": ["A) 政務官負責政策制定，政策成敗須負政治責任（如辭職下臺）", "B) 事務官必須隨政黨輪替而集體進退辭職", "C) 政策出錯時一律由基層公務員負起所有的政治責任", "D) 兩者皆享有終身職保障，不必承擔任何責任"],
+                    "correct_index": 0,
+                    "explanation": "政務官隨政黨進退，負責承擔「政治責任」（如請辭下臺）；事務官則受公務員法保障，依法行政承擔行政與法律責任。"
                 }
             ],
             "remediation_guides": {
@@ -333,6 +491,18 @@ def get_builtin_default_units():
                     "simple_explanation": "法律面前人人平等，政府官員手中的權力也是法律給的，不可以隨心所欲想罰就罰。",
                     "life_case": "教官或老師要檢查違禁品也必須依照學校規章程序，不能隨意搜書包。",
                     "pitfall_tip": "避坑口訣：依法行政、保障人權 ＝ 法治政治（人治政治的相反）！"
+                },
+                "政黨政治": {
+                    "concept": "政黨政治",
+                    "simple_explanation": "政黨政治就是不同隊伍良性競爭！執政黨負責開車，在野黨坐在副駕駛監督並抓違規，做不好就換隊開！",
+                    "life_case": "就像班上分組競賽，各組提出不同企劃，大家投票選最好的方案，落選的組別也能提供建議監督。",
+                    "pitfall_tip": "避坑口訣：良性競爭、監督制衡、和平輪替 ＝ 政黨政治！"
+                },
+                "主權在民": {
+                    "concept": "主權在民",
+                    "simple_explanation": "國家真正的大老闆是全體人民！官員和立委只是人民請來的專業經理人，人民有權利透過選票考核他們。",
+                    "life_case": "全班同學才是班級的主人，班長是大家選出來替全班服務的，而不是班長管全班。",
+                    "pitfall_tip": "避坑口訣：人民是老闆、公僕受委託 ＝ 主權在民！"
                 }
             }
         },
@@ -372,7 +542,7 @@ def get_builtin_default_units():
                     "takeaway": "💡 人民自由不是無限大，但政府限制自由必須依法且符合比例原則！"
                 }
             ],
-            "mindmap_mermaid": """graph TD
+            "mindmap_mermaid": """graph LR
   A["第2課：憲法與權利保障"] --> B["法律三位階"]
   A --> C["憲法基本權利"]
   A --> D["基本權利之限制"]
@@ -418,6 +588,38 @@ def get_builtin_default_units():
                     "options": ["A) 由行政長官口頭命令即可", "B) 必須有立法院通過的「法律」明文依據", "C) 由鄰里長投票表決", "D) 由民間團體決議即可"],
                     "correct_index": 1,
                     "explanation": "限制人民基本權利必須以立法院通過之「法律」為依據，此即為憲法上的「法律保留原則」。"
+                },
+                {
+                    "id": "q5",
+                    "concept_tag": "受益權",
+                    "question": "現代國家中，國民依法享有接受九年國民義務教育的權利，經濟困難家庭亦可向政府申請社會救助。這些屬於憲法保障的哪一類基本權利？",
+                    "options": ["A) 受益權 (請求國家提供給付與救濟)", "B) 參政權", "C) 自由權", "D) 平等權"],
+                    "correct_index": 0,
+                    "explanation": "受益權是指人民得請求國家提供經濟照顧、受教育或司法救濟等利益之權利，例如受教育權、生存權與請願訴願訴訟權。"
+                },
+                {
+                    "id": "q6",
+                    "concept_tag": "參政權",
+                    "question": "憲法保障人民參與國家政治運作的權利，下列各項權利中，何者屬於憲法保障之「參政權」？",
+                    "options": ["A) 言論自由與秘密通訊自由", "B) 選舉、罷免、創制、複決權及應考試服公職權", "C) 居住及遷徙自由", "D) 人身安全不受非法搜索之自由"],
+                    "correct_index": 1,
+                    "explanation": "憲法保障人民之參政權包括選舉權、罷免權、創制權、複決權，以及參加公務人員考試與擔任公職的權利。"
+                },
+                {
+                    "id": "q7",
+                    "concept_tag": "比例原則",
+                    "question": "警察追捕一名僅犯下輕微闖紅燈違規的機車騎士時，若直接開槍射擊導致其重傷，此執法手段明顯違反了下列何項憲法原則？",
+                    "options": ["A) 比例原則 (手段過當，危害與目的不相當)", "B) 誠實信用原則", "C) 政黨政治原則", "D) 罪刑法定原則"],
+                    "correct_index": 0,
+                    "explanation": "比例原則要求政府行使權力時，所採取的手段必須適當且為侵害最小者，手段與目的間更必須維持均衡，不得「用大砲打小鳥」。"
+                },
+                {
+                    "id": "q8",
+                    "concept_tag": "法律位階",
+                    "question": "某行政機關發布之「施行細則」（命令）若牴觸立法院通過之「法律」，依據法律位階原則，其法律效力為何？",
+                    "options": ["A) 依然有效，行政命令效力高於法律", "B) 自始牴觸無效，下位法規不得牴觸上位法規", "C) 由地方政府自行投票決定是否遵守", "D) 僅在直轄市範圍內無效，其他縣市有效"],
+                    "correct_index": 1,
+                    "explanation": "依據法律位階原則（法律優位原則），命令不得牴觸憲法與法律，牴觸者無效。"
                 }
             ],
             "remediation_guides": {
@@ -444,6 +646,24 @@ def get_builtin_default_units():
                     "simple_explanation": "凡是涉及限制人民生命、人身自由、財產等重要權利的事項，必須由人民選出的立法院制定「法律」來規定，不能只靠行政官員一張紙下令。",
                     "life_case": "警察不能隨意開罰單，開罰單必須有立法院通過的交通處罰條例做依據。",
                     "pitfall_tip": "避坑口訣：限制人民重要人權，一定要有「法律」依據！"
+                },
+                "受益權": {
+                    "concept": "受益權",
+                    "simple_explanation": "受益權就是向國家『伸手要好處或求救』！例如生病看健保、上學受國教、發生糾紛上法院打官司請求救濟。",
+                    "life_case": "小明家裡遭小偷，報警並向法院提告請求賠償，這就是在行使司法上的受益權。",
+                    "pitfall_tip": "避坑口訣：請求國家給予給付、保護或救濟 ＝ 受益權！"
+                },
+                "參政權": {
+                    "concept": "參政權",
+                    "simple_explanation": "參政權就是『當國家的主人親自參與管事』！包括投票選立委、提案公投，或是去考公務員為民服務。",
+                    "life_case": "班級開班會時大家舉手表決班長，這就是校園版的參政權！",
+                    "pitfall_tip": "避坑口訣：選幹部、投公投、考公務員 ＝ 參政權！"
+                },
+                "比例原則": {
+                    "concept": "比例原則",
+                    "simple_explanation": "手段不能太誇張！俗稱『不能用大砲打小鳥』。政府要達成目的，必須用侵害最小、最合理的方法。",
+                    "life_case": "同學上課打瞌睡，老師提醒即可，不能直接罰他退學，這就是合乎比例原則。",
+                    "pitfall_tip": "避坑口訣：手段合宜、侵害最小、不可用大砲打小鳥 ＝ 比例原則！"
                 }
             }
         }

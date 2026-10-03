@@ -5,65 +5,166 @@ import data_loader
 import os
 import json
 import html
+import re
 from dotenv import load_dotenv
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="國中八年級公民 AI 智慧學習館",
-    page_icon="🏛️",
+    page_title="國中公民思辨星系 ｜ AI 智慧自主學習館",
+    page_icon="🌌",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 load_dotenv()
+TEACHER_PASSWORD = os.getenv("TEACHER_PASSWORD", "MCJH2026")
 
-# --- Custom High-Contrast Modern Theme ---
+# --- GSAT Exam Galaxy Inspired Celestial Theme ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    /* Google Fonts: Noto Serif TC (思源宋體) + Noto Sans TC (思源黑體) */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    
+    :root {
+        --galaxy-bg: #060b16;
+        --galaxy-ink: #0a1526;
+        --galaxy-ink-card: #0d1c33;
+        --galaxy-paper: #d0e0ee;
+        --galaxy-paper-muted: #8ba5be;
+        --galaxy-gold: #5b9ed7;
+        --galaxy-gold-pale: #95c6f4;
+        --galaxy-amber: #f4d38b;
+        --galaxy-line: rgba(150, 192, 230, 0.18);
+        --font-serif: 'Noto Serif TC', serif;
+        --font-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
     
     html, body, [class*="css"] {
-        font-family: 'Outfit', 'Noto Sans TC', -apple-system, sans-serif;
+        font-family: var(--font-sans);
     }
     
+    /* 墨染深邃背景 + 水墨柔光光暈 */
     .stApp {
-        background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
-        color: #f8fafc !important;
+        background-color: var(--galaxy-bg) !important;
+        background-image: 
+            radial-gradient(circle at 68% -12%, #274a73 0, transparent 38rem),
+            radial-gradient(circle at 12% 108%, #16345c 0, transparent 42rem),
+            linear-gradient(165deg, #0d1c33 0%, #0a1526 45%, #060b16 100%) !important;
+        color: var(--galaxy-paper) !important;
     }
     
-    .stMarkdown p, .stMarkdown span, .stMarkdown strong, .stMarkdown li, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
-        color: #f8fafc !important;
+    .stMarkdown p, .stMarkdown span, .stMarkdown strong, .stMarkdown li {
+        color: var(--galaxy-paper) !important;
     }
     
-    /* Header Banner */
-    .app-header {
-        background: linear-gradient(135deg, rgba(79, 70, 229, 0.4) 0%, rgba(147, 51, 234, 0.35) 50%, rgba(236, 72, 153, 0.25) 100%);
+    h1, h2, h3, .app-title {
+        font-family: var(--font-serif) !important;
+        color: #ffffff !important;
+        letter-spacing: -0.015em;
+    }
+
+    /* 眉標（Eyebrow） */
+    .eyebrow {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--galaxy-gold-pale);
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        margin: 0 0 0.4rem 0;
+    }
+
+    /* 頂部銀河 Header */
+    .galaxy-header {
+        position: relative;
+        background: rgba(13, 28, 51, 0.68);
         backdrop-filter: blur(16px);
-        border: 1.5px solid rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
-        padding: 1.8rem 2.2rem;
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--galaxy-line);
+        border-radius: 18px;
+        padding: 1.6rem 2.2rem;
         margin-bottom: 1.8rem;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     }
-    
-    .app-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #ffffff 0%, #c084fc 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.3rem;
+
+    /* 品牌印章 */
+    .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.7rem;
+        height: 2.7rem;
+        background: #2c5a92;
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        font-family: var(--font-serif);
+        font-size: 1.35rem;
+        font-weight: 700;
+        border-radius: 7px;
+        box-shadow: 0 0 1.5rem rgba(50, 110, 166, 0.45);
+        flex-shrink: 0;
     }
-    
-    .app-subtitle {
-        font-size: 1.05rem;
-        color: #cbd5e1 !important;
-        font-weight: 500;
+
+    /* 呼吸燈狀態膠囊 */
+    .pulse-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        background: rgba(208, 224, 238, 0.04);
+        border: 1px solid rgba(208, 224, 238, 0.16);
+        border-radius: 999px;
+        padding: 0.38rem 0.95rem;
+        font-size: 0.82rem;
+        color: var(--galaxy-paper);
+        letter-spacing: 0.08em;
+    }
+
+    .pulse-dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        background: var(--galaxy-amber);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--galaxy-amber);
+        animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+        0%, 100% { opacity: 0.35; transform: scale(0.9); }
+        50% { opacity: 1; transform: scale(1.25); box-shadow: 0 0 12px var(--galaxy-amber); }
+    }
+
+    /* 01, 02 序號風格重點手札卡片 */
+    .numbered-card {
+        position: relative;
+        background: rgba(14, 29, 51, 0.72);
+        border: 1px solid var(--galaxy-line);
+        border-radius: 14px;
+        padding: 1.3rem 1.6rem 1.3rem 4.4rem;
+        margin-bottom: 0.95rem;
+        transition: all 0.25s ease;
+    }
+
+    .numbered-card:hover {
+        border-color: rgba(149, 198, 244, 0.45);
+        background: rgba(20, 39, 67, 0.85);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .numbered-card .card-idx {
+        position: absolute;
+        top: 1.15rem;
+        left: 1.35rem;
+        font-family: var(--font-serif);
+        font-size: 1.55rem;
+        font-weight: 900;
+        color: var(--galaxy-gold-pale);
+        opacity: 0.75;
+        line-height: 1;
     }
 
     /* Cards */
     .feature-card {
-        background: rgba(30, 41, 59, 0.85);
-        border: 1.5px solid #334155;
+        background: rgba(14, 29, 51, 0.75);
+        border: 1px solid var(--galaxy-line);
         border-radius: 16px;
         padding: 1.5rem;
         margin-bottom: 1.2rem;
@@ -71,8 +172,8 @@ st.markdown("""
     }
 
     .key-point-card {
-        background: rgba(15, 23, 42, 0.75);
-        border-left: 5px solid #818cf8;
+        background: rgba(12, 24, 43, 0.75);
+        border-left: 4px solid var(--galaxy-gold);
         border-radius: 10px;
         padding: 1rem 1.2rem;
         margin-bottom: 0.8rem;
@@ -81,24 +182,53 @@ st.markdown("""
     }
 
     .case-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(49, 46, 129, 0.4) 100%);
-        border: 1.5px solid #6366f1;
+        background: linear-gradient(135deg, rgba(14, 29, 51, 0.9) 0%, rgba(26, 48, 80, 0.75) 100%);
+        border: 1px solid rgba(91, 158, 215, 0.35);
         border-radius: 16px;
-        padding: 1.4rem;
+        padding: 1.4rem 1.6rem;
         margin-bottom: 1.2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
 
     .remedial-box {
-        background: linear-gradient(135deg, rgba(234, 88, 12, 0.15) 0%, rgba(30, 41, 59, 0.9) 100%);
-        border: 2px solid #f97316;
+        background: linear-gradient(135deg, rgba(166, 69, 50, 0.15) 0%, rgba(14, 29, 51, 0.9) 100%);
+        border: 1.5px solid rgba(244, 211, 139, 0.5);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1.2rem 0;
     }
 
+    /* 星系觀測站 (Observatory Strip) 數據橫幅 */
+    .observatory-strip {
+        background: rgba(13, 25, 43, 0.85);
+        border: 1px solid var(--galaxy-line);
+        border-radius: 16px;
+        padding: 1.4rem 1.8rem;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        text-align: center;
+        margin: 1.5rem 0;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .observatory-strip strong {
+        display: block;
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        color: var(--galaxy-amber);
+        letter-spacing: -0.02em;
+    }
+
+    .observatory-strip span {
+        font-size: 0.82rem;
+        color: var(--galaxy-paper-muted);
+        letter-spacing: 0.1em;
+    }
+
     .summary-metric-card {
-        background: rgba(30, 41, 59, 0.9);
-        border: 1.5px solid #475569;
+        background: rgba(14, 29, 51, 0.85);
+        border: 1px solid var(--galaxy-line);
         border-radius: 16px;
         padding: 1.5rem;
         text-align: center;
@@ -108,86 +238,162 @@ st.markdown("""
     /* Tabs Styling */
     div[data-testid="stTabs"] {
         background-color: transparent !important;
-        border-bottom: 2px solid #6366f1 !important;
+        border-bottom: 1px solid var(--galaxy-line) !important;
         margin-bottom: 1.5rem !important;
     }
 
     div[data-testid="stTabs"] button,
     button[data-baseweb="tab"] {
-        background-color: #1e293b !important;
-        border: 2px solid #475569 !important;
-        border-bottom: none !important;
-        border-radius: 12px 12px 0px 0px !important;
+        background-color: transparent !important;
+        border: 1px solid transparent !important;
+        border-radius: 999px !important;
         margin-right: 8px !important;
-        padding: 0.75rem 1.5rem !important;
-        transition: all 0.2s ease !important;
+        padding: 0.55rem 1.3rem !important;
+        transition: all 0.25s ease !important;
     }
 
     div[data-testid="stTabs"] button p,
     div[data-testid="stTabs"] button span,
     button[data-baseweb="tab"] p,
     button[data-baseweb="tab"] span {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        font-size: 1.1rem !important;
-        font-weight: 700 !important;
+        color: var(--galaxy-paper-muted) !important;
+        font-size: 1.02rem !important;
+        font-weight: 600 !important;
     }
 
     div[data-testid="stTabs"] button[aria-selected="true"],
     button[data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
-        border: 2px solid #818cf8 !important;
-        border-bottom: 4px solid #fef08a !important;
+        background: rgba(208, 224, 238, 0.08) !important;
+        border: 1px solid var(--galaxy-line) !important;
+        border-bottom: 2px solid var(--galaxy-amber) !important;
     }
 
     div[data-testid="stTabs"] button[aria-selected="true"] p,
     div[data-testid="stTabs"] button[aria-selected="true"] span {
-        color: #fef08a !important;
-        -webkit-text-fill-color: #fef08a !important;
-        font-weight: 800 !important;
+        color: var(--galaxy-amber) !important;
+        font-weight: 700 !important;
     }
 
+    /* Badges */
     .badge-status-mastered {
-        background: rgba(34, 197, 94, 0.2);
-        border: 1.5px solid #22c55e;
-        color: #4ade80 !important;
-        padding: 6px 14px;
+        background: rgba(82, 125, 113, 0.25);
+        border: 1.5px solid #527d71;
+        color: #93c5fd !important;
+        padding: 5px 13px;
         border-radius: 20px;
         font-weight: 700;
         display: inline-block;
     }
 
     .badge-status-practice {
-        background: rgba(234, 179, 8, 0.2);
-        border: 1.5px solid #eab308;
-        color: #facc15 !important;
-        padding: 6px 14px;
+        background: rgba(244, 211, 139, 0.18);
+        border: 1.5px solid #f4d38b;
+        color: #fde047 !important;
+        padding: 5px 13px;
         border-radius: 20px;
         font-weight: 700;
         display: inline-block;
     }
 
     .badge-status-look {
-        background: rgba(239, 68, 68, 0.2);
-        border: 1.5px solid #ef4444;
-        color: #f87171 !important;
-        padding: 6px 14px;
+        background: rgba(166, 69, 50, 0.22);
+        border: 1.5px solid #a64532;
+        color: #fca5a5 !important;
+        padding: 5px 13px;
         border-radius: 20px;
         font-weight: 700;
         display: inline-block;
     }
 
     .reader-container {
-        background-color: #0b1120 !important;
-        color: #ffffff !important;
+        background-color: #070e1a !important;
+        color: #d0e0ee !important;
         padding: 1.8rem;
         border-radius: 12px;
-        border: 1.5px solid #334155;
+        border: 1px solid var(--galaxy-line);
         font-size: 1.05rem;
         line-height: 1.85;
         max-height: 450px;
         overflow-y: auto;
         white-space: pre-wrap;
+    }
+
+    /* 核心觀念直式心智圖外框卡片與放大優化 */
+    .mindmap-card {
+        background: rgba(11, 23, 42, 0.88);
+        border: 1px solid rgba(149, 198, 244, 0.32);
+        border-radius: 18px;
+        padding: 1.8rem 1.4rem;
+        margin: 1.2rem 0;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        overflow-x: auto;
+    }
+
+    /* 直式心智圖 SVG 尺寸優化：自適應寬度，直向展開不擠壓 */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"],
+    div[data-testid="stMarkdownContainer"] .mermaid svg {
+        display: block !important;
+        margin: 1rem auto !important;
+        width: 100% !important;
+        max-width: 920px !important;
+        height: auto !important;
+        filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5)) !important;
+    }
+
+    /* 大幅提升心智圖內部文字節點大小、字重與對比度 */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] text,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .nodeLabel,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .label,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] span {
+        font-size: 20px !important;
+        font-weight: 700 !important;
+        line-height: 1.5 !important;
+        font-family: var(--font-sans) !important;
+        fill: #ffffff !important;
+        color: #ffffff !important;
+        letter-spacing: 0.3px !important;
+    }
+
+    /* 頂層主要核心節點（A節點）特大字體與金色醒目標示 */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] g[id*="flowchart-A-"] text,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] g[id*="flowchart-A-"] .nodeLabel,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] g[id*="flowchart-A-"] span {
+        font-size: 22px !important;
+        font-weight: 900 !important;
+        color: #fff9e6 !important;
+        fill: #fff9e6 !important;
+    }
+
+    /* 節點外框加粗與圓角提升質感 */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .node rect,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .node circle,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .node polygon {
+        stroke-width: 2.5px !important;
+        stroke: #7ab8eb !important;
+        fill: #162e52 !important;
+        rx: 10px !important;
+        ry: 10px !important;
+    }
+
+    /* 頂層核心節點外框特別強調高亮（A節點） */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] g[id*="flowchart-A-"] rect,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] g[id*="flowchart-A-"] polygon {
+        stroke: var(--galaxy-amber) !important;
+        stroke-width: 3.5px !important;
+        fill: #1f3f6d !important;
+    }
+
+    /* 箭頭與連線加粗金黃高對比 */
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .flowchart-link,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] path.link,
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] .edgePath path {
+        stroke: var(--galaxy-amber) !important;
+        stroke-width: 2.8px !important;
+    }
+
+    div[data-testid="stMarkdownContainer"] svg[id^="mermaid-"] marker path {
+        fill: var(--galaxy-amber) !important;
+        stroke: var(--galaxy-amber) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -195,6 +401,12 @@ st.markdown("""
 # --- Session State Initialization ---
 if "user_role" not in st.session_state:
     st.session_state.user_role = "student"  # "student" or "teacher"
+if "is_teacher_authenticated" not in st.session_state:
+    st.session_state.is_teacher_authenticated = False
+if "role_radio_key_version" not in st.session_state:
+    st.session_state.role_radio_key_version = 0
+if "teacher_modal_pwd" not in st.session_state:
+    st.session_state.teacher_modal_pwd = ""
 if "student_name" not in st.session_state:
     st.session_state.student_name = ""
 if "student_class" not in st.session_state:
@@ -212,6 +424,76 @@ if "chat_history" not in st.session_state:
 if "student_tab_selection" not in st.session_state:
     st.session_state.student_tab_selection = "📖 開始學習"
 
+def switch_to_practice_tab():
+    st.session_state.student_tab_selection = "✏️ 小試身手"
+
+def on_auth_dismiss():
+    if not st.session_state.get("is_teacher_authenticated", False):
+        st.session_state.user_role = "student"
+        st.session_state.role_radio_key_version += 1
+
+@st.dialog("🔒 教師身分驗證", on_dismiss=on_auth_dismiss)
+def teacher_auth_dialog():
+    st.markdown("切換至 **👨‍🏫 教師管理端** 需要確認教師本人身分。<br>請輸入教師管理專屬密碼：", unsafe_allow_html=True)
+    with st.form("teacher_auth_modal_form", clear_on_submit=False):
+        pwd = st.text_input("教師密碼", type="password", key="teacher_modal_pwd", placeholder="請輸入教師密碼")
+        c1, c2 = st.columns(2)
+        with c1:
+            submit_btn = st.form_submit_button("🔑 確認驗證", type="primary", use_container_width=True)
+        with c2:
+            cancel_btn = st.form_submit_button("返回學生端", use_container_width=True)
+
+        if submit_btn:
+            if pwd == TEACHER_PASSWORD:
+                st.session_state.is_teacher_authenticated = True
+                st.session_state.user_role = "teacher"
+                st.session_state.practice_submitted = False
+                st.session_state.practice_answers = {}
+                st.success("✅ 身分驗證成功！正在進入教師端...")
+                st.rerun()
+            else:
+                st.error("❌ 密碼錯誤，請重新確認！")
+        elif cancel_btn:
+            on_auth_dismiss()
+            st.rerun()
+
+def format_mindmap_mermaid(raw_mermaid: str) -> str:
+    if not raw_mermaid:
+        return ""
+    cleaned = raw_mermaid.strip()
+
+    # 移除舊有的 %%{init: ...}%% 指令以防重複
+    cleaned = re.sub(r'%%\{init:[^%]*\}%%', '', cleaned, flags=re.DOTALL).strip()
+
+    # 將 TD / TB (由上至下橫向鋪開) 自動轉換為 LR (由左至右、直式由上而下層層展開，適配直式閱讀)
+    cleaned = re.sub(r'^(graph|flowchart)\s+(TD|TB)', r'\1 LR', cleaned, flags=re.IGNORECASE | re.MULTILINE)
+
+    # 若無流程圖宣告，預設補上 graph LR
+    if not re.search(r'^(graph|flowchart)\s+', cleaned, flags=re.IGNORECASE | re.MULTILINE):
+        cleaned = f"graph LR\n{cleaned}"
+
+    init_directive = """%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#173059',
+    'primaryTextColor': '#ffffff',
+    'primaryBorderColor': '#7ab8eb',
+    'lineColor': '#f4d38b',
+    'secondaryColor': '#1a3668',
+    'tertiaryColor': '#0b1629',
+    'fontSize': '22px',
+    'fontFamily': 'Noto Sans TC, -apple-system, sans-serif'
+  },
+  'flowchart': {
+    'nodeSpacing': 35,
+    'rankSpacing': 65,
+    'curve': 'basis',
+    'padding': 20
+  }
+}}%%
+"""
+    return f"{init_directive}{cleaned}"
+
 # Load all units
 all_units = unit_manager.load_all_units()
 if not all_units:
@@ -225,14 +507,22 @@ with st.sidebar:
         "選擇操作身分",
         ["🎓 我是學生", "👨‍🏫 我是老師"],
         index=0 if st.session_state.user_role == "student" else 1,
+        key=f"role_radio_{st.session_state.role_radio_key_version}",
         label_visibility="collapsed"
     )
-    new_role = "teacher" if "老師" in role_choice else "student"
-    if new_role != st.session_state.user_role:
-        st.session_state.user_role = new_role
-        st.session_state.practice_submitted = False
-        st.session_state.practice_answers = {}
-        st.rerun()
+
+    if "老師" in role_choice:
+        if not st.session_state.is_teacher_authenticated:
+            teacher_auth_dialog()
+        else:
+            st.session_state.user_role = "teacher"
+    else:
+        if st.session_state.user_role == "teacher":
+            st.session_state.user_role = "student"
+            st.session_state.is_teacher_authenticated = False
+            st.session_state.practice_submitted = False
+            st.session_state.practice_answers = {}
+            st.rerun()
 
     st.markdown("---")
 
@@ -272,11 +562,20 @@ with st.sidebar:
                 st.session_state.practice_submitted = False
                 st.session_state.practice_answers = {}
                 st.session_state.chat_history = []
+                st.session_state.student_tab_selection = "📖 開始學習"
                 st.rerun()
 
     else:
         st.markdown("### 👨‍🏫 教師管理功能")
         st.info("教師只需新增教材與貼上課本內容，AI 自動為您萃取重點、生活案例、題目與補救指引！")
+        if st.button("🔒 登出教師 / 返回學生端", use_container_width=True):
+            st.session_state.user_role = "student"
+            st.session_state.is_teacher_authenticated = False
+            st.session_state.role_radio_key_version += 1
+            st.session_state.practice_submitted = False
+            st.session_state.practice_answers = {}
+            st.session_state.student_tab_selection = "📖 開始學習"
+            st.rerun()
 
 # ══════════════════════════════════════════════
 # 🎓 學生端 (Student Portal)
@@ -290,28 +589,46 @@ if st.session_state.user_role == "student":
 
     current_unit = unit_manager.get_unit(st.session_state.current_unit_id) or all_units[0]
 
-    # Top Banner
+    # Top Galaxy Banner
     st.markdown(f"""
-    <div class="app-header">
-        <div class="app-title">🏛️ 國中公民 AI 智慧自主學習館</div>
-        <div class="app-subtitle">輕鬆閱讀重點與生活實例 · 小試身手了解學習成效 · AI 助教陪伴自主成長</div>
-        <div style="margin-top: 1rem;">
-            <span style="background: rgba(99, 102, 241, 0.35); border: 1.5px solid #818cf8; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-weight: 700; margin-right: 8px;">
-                👤 {student_info['class_name']} 班 {student_info['seat_num']} 號 {student_info['name']}
-            </span>
-            <span style="background: rgba(168, 85, 247, 0.35); border: 1.5px solid #c084fc; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-weight: 700;">
-                📖 當前單元：{current_unit['title']}
+    <div class="galaxy-header">
+        <p class="eyebrow">NATIONAL JUNIOR HIGH CIVICS AI LEARNING GALAXY</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center;">
+                <span class="brand-mark">民</span>
+                <div>
+                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; line-height: 1.2;">國中公民思辨星系</h1>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
+                </div>
+            </div>
+            <div class="pulse-status">
+                <span class="pulse-dot"></span>
+                <span>星軌運行中 ｜ 👤 {student_info['class_name']} 班 {student_info['seat_num']} 號 {student_info['name']}</span>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <span style="background: rgba(44, 90, 146, 0.35); border: 1px solid rgba(149, 198, 244, 0.35); color: #d0e0ee; padding: 4px 14px; border-radius: 999px; font-size: 0.88rem; font-weight: 600;">
+                📖 當前巡航單元：{current_unit['title']}
             </span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Three Student Tabs
-    tab_learn, tab_practice, tab_footprint = st.tabs([
+    # Four Student Tabs
+    valid_student_tabs = [
         "📖 開始學習",
         "✏️ 小試身手",
+        "💬 公民 AI 助教隨身問",
         "🌱 我的足跡"
-    ])
+    ]
+    if st.session_state.get("student_tab_selection") not in valid_student_tabs:
+        st.session_state.student_tab_selection = valid_student_tabs[0]
+
+    tab_learn, tab_practice, tab_ai_tutor, tab_footprint = st.tabs(
+        valid_student_tabs,
+        key="student_tab_selection",
+        on_change="rerun"
+    )
 
     # ──────────────────────────────────────────────
     # 1. 📖 開始學習 (Learn)
@@ -319,21 +636,34 @@ if st.session_state.user_role == "student":
     with tab_learn:
         st.markdown(f"### 📖 {current_unit['title']} — 重點與生活實例")
 
-        # 核心學習重點
-        key_points = current_unit.get("key_points", [])
-        if key_points:
-            st.markdown("#### 📌 核心學習重點")
-            for idx, pt in enumerate(key_points):
-                st.markdown(f'<div class="key-point-card"><b>重點 {idx+1}：</b> {pt}</div>', unsafe_allow_html=True)
-
-        # 國中生白話整理
+        # 1. 國中生白話整理（輕鬆看懂這堂課）
         easy_content = current_unit.get("easy_content", "")
         if easy_content:
-            st.markdown("---")
             st.markdown("#### 🌟 輕鬆看懂這堂課")
             st.markdown(f'<div class="feature-card">{easy_content}</div>', unsafe_allow_html=True)
 
-        # 生活化情境案例
+        # 2. 核心學習重點
+        key_points = current_unit.get("key_points", [])
+        if key_points:
+            st.markdown("---")
+            st.markdown("#### 📌 核心學習重點")
+            for idx, pt in enumerate(key_points):
+                st.markdown(f"""
+                <div class="numbered-card">
+                    <span class="card-idx">{idx+1:02d}</span>
+                    <div style="font-size: 1.05rem; line-height: 1.7; color: #d0e0ee;">{pt}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # 3. 核心觀念心智圖（直式放大清晰版）
+        mindmap_mermaid = current_unit.get("mindmap_mermaid", "")
+        if mindmap_mermaid:
+            st.markdown("---")
+            st.markdown("#### 🧠 核心觀念心智圖")
+            formatted_mindmap = format_mindmap_mermaid(mindmap_mermaid)
+            st.markdown(f"```mermaid\n{formatted_mindmap}\n```")
+
+        # 4. 生活與校園情境案例
         life_cases = current_unit.get("life_cases", [])
         if life_cases:
             st.markdown("---")
@@ -341,20 +671,14 @@ if st.session_state.user_role == "student":
             for c in life_cases:
                 st.markdown(f"""
                 <div class="case-card">
-                    <h4 style="color: #93c5fd; margin-bottom: 0.5rem;">{c.get('title','情境實例')}</h4>
-                    <p style="font-size: 1.05rem; line-height: 1.7; color: #f1f5f9;">{c.get('story','')}</p>
-                    <div style="background: rgba(15, 23, 42, 0.6); padding: 0.8rem 1.2rem; border-radius: 8px; font-weight: 700; color: #fef08a; border-left: 4px solid #facc15; margin-top: 0.8rem;">
-                        {c.get('takeaway','')}
+                    <p class="eyebrow" style="font-size: 0.72rem; margin-bottom: 0.3rem;">CASE STUDY</p>
+                    <h4 style="color: #95c6f4; margin: 0 0 0.6rem 0; font-family: var(--font-serif); font-size: 1.2rem;">{c.get('title','情境實例')}</h4>
+                    <p style="font-size: 1.05rem; line-height: 1.75; color: #d0e0ee;">{c.get('story','')}</p>
+                    <div style="background: rgba(10, 21, 38, 0.85); padding: 0.9rem 1.2rem; border-radius: 10px; font-weight: 700; color: #f4d38b; border-left: 4px solid #f4d38b; margin-top: 0.8rem; font-size: 0.98rem;">
+                        💡 思辨焦點：{c.get('takeaway','')}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-
-        # 觀念心智圖
-        mindmap_mermaid = current_unit.get("mindmap_mermaid", "")
-        if mindmap_mermaid:
-            st.markdown("---")
-            st.markdown("#### 🧠 核心觀念心智圖")
-            st.markdown(f"```mermaid\n{mindmap_mermaid}\n```")
 
         # 課本原文閱讀 (可摺疊)
         raw_text = current_unit.get("raw_content", "")
@@ -363,17 +687,32 @@ if st.session_state.user_role == "student":
                 safe_html = html.escape(raw_text)
                 st.markdown(f'<div class="reader-container">{safe_html}</div>', unsafe_allow_html=True)
 
-        st.info("💡 讀完重點與生活案例了嗎？切換至 **【✏️ 小試身手】** 進行簡單的觀念練習吧！")
+        st.markdown("""
+        <div style="background: rgba(22, 46, 82, 0.7); border: 1px solid rgba(149, 198, 244, 0.35); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 1.8rem 0 0.8rem 0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem; font-size: 1.05rem; color: #d0e0ee; line-height: 1.6;">
+                    <span style="font-size: 1.5rem;">💡</span>
+                    <span>讀完重點與生活案例了嗎？點擊下方按鈕即可快速切換至 <b>【✏️ 小試身手】</b> 進行觀念練習！</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.button(
+            "🚀 前往【✏️ 小試身手】觀念練習",
+            type="primary",
+            use_container_width=True,
+            key="btn_quick_jump_practice",
+            on_click=switch_to_practice_tab
+        )
 
     # ──────────────────────────────────────────────
     # 2. ✏️ 小試身手 (Practice)
     # ──────────────────────────────────────────────
     with tab_practice:
         st.markdown(f"### ✏️ 小試身手 — {current_unit['title']}")
-        st.caption("簡單完成幾道生活化概念練習，了解自己掌握了哪些重點！")
-
         questions = current_unit.get("practice_questions", [])
         remedy_guides = current_unit.get("remediation_guides", {})
+        st.caption(f"共 {len(questions)} 道生活化概念練習，了解自己掌握了哪些重點！")
 
         if not questions:
             st.info("這個單元暫無練習題，請直接閱讀重點喔！")
@@ -495,11 +834,13 @@ if st.session_state.user_role == "student":
                     st.session_state.practice_answers = {}
                     st.rerun()
 
-        # 隨身 AI 助教
-        st.markdown("---")
-        st.markdown("#### 💬 公民 AI 助教隨身問")
+    # ──────────────────────────────────────────────
+    # 3. 💬 公民 AI 助教隨身問 (AI Tutor)
+    # ──────────────────────────────────────────────
+    with tab_ai_tutor:
+        st.markdown(f"### 💬 公民 AI 助教隨身問 — {current_unit['title']}")
         st.caption("對這堂課還有任何不懂的疑問嗎？隨時問 AI 助教，用校園日常生活幫你解惑！")
-        
+
         q_user = st.text_input("輸入你的問題（例如：為什麼主權對外要獨立？生活中有什麼例子？）：", key=f"chat_input_{current_unit['id']}")
         if st.button("❓ 請 AI 老師解答", key=f"btn_ask_{current_unit['id']}", type="primary"):
             if q_user.strip():
@@ -511,6 +852,7 @@ if st.session_state.user_role == "student":
                 st.warning("請先輸入你的問題喔！")
 
         if st.session_state.chat_history:
+            st.markdown("---")
             st.markdown("##### 📜 問答交流紀錄")
             for q_text, a_text in reversed(st.session_state.chat_history):
                 with st.chat_message("user"):
@@ -519,7 +861,7 @@ if st.session_state.user_role == "student":
                     st.markdown(a_text)
 
     # ──────────────────────────────────────────────
-    # 3. 🌱 我的足跡 (Footprint)
+    # 4. 🌱 我的足跡 (Footprint)
     # ──────────────────────────────────────────────
     with tab_footprint:
         st.markdown("### 🌱 我的自主學習足跡")
@@ -530,12 +872,26 @@ if st.session_state.user_role == "student":
         if not footprints:
             st.info("🌱 你尚未在任何單元進行「小試身手」。快挑選一個單元開始學習吧！")
         else:
-            col_stat1, col_stat2 = st.columns(2)
-            with col_stat1:
-                st.metric("已完成學習單元", f"{len(footprints)} 個單元")
-            with col_stat2:
-                mastered_count = sum(1 for f in footprints if "🌳" in f.get("status", ""))
-                st.metric("已完全掌握單元", f"{mastered_count} 個單元")
+            total_count = len(footprints)
+            mastered_count = sum(1 for f in footprints if "🌳" in f.get("status", ""))
+            accuracy_rate = round((mastered_count / total_count * 100) if total_count > 0 else 0)
+
+            st.markdown(f"""
+            <div class="observatory-strip">
+                <div>
+                    <strong>{total_count}</strong>
+                    <span>🔭 巡航探索單元</span>
+                </div>
+                <div>
+                    <strong>{mastered_count}</strong>
+                    <span>✨ 已點亮星宿（已掌握）</span>
+                </div>
+                <div>
+                    <strong>{accuracy_rate}%</strong>
+                    <span>🎯 觀念掌握度</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
             st.markdown("---")
             for fp in footprints:
@@ -553,11 +909,11 @@ if st.session_state.user_role == "student":
                 st.markdown(f"""
                 <div class="feature-card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-                        <h4 style="margin: 0; color: #a5b4fc;">{fp.get('unit_title','')}</h4>
+                        <h4 style="margin: 0; color: #95c6f4; font-family: var(--font-serif); font-size: 1.15rem;">📖 {fp.get('unit_title','')}</h4>
                         <span class="{badge_class}">{status_str}</span>
                     </div>
-                    <p style="margin: 0.3rem 0; color: #cbd5e1;"><b>🔄 練習次數：</b>{fp.get('practice_count',1)} 次 ｜ <b>重點概念：</b>{weak_text}</p>
-                    <p style="margin: 0.3rem 0; font-size: 0.9rem; color: #94a3b8;">最後學習時間：{fp.get('last_updated','')}</p>
+                    <p style="margin: 0.3rem 0; color: #cbd5e1;"><b>🔄 探索次數：</b>{fp.get('practice_count',1)} 次 ｜ <b>重點概念：</b>{weak_text}</p>
+                    <p style="margin: 0.3rem 0; font-size: 0.88rem; color: #8ba5be;">最後巡航時間：{fp.get('last_updated','')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -565,10 +921,26 @@ if st.session_state.user_role == "student":
 # 👨‍🏫 教師端 (Teacher Portal)
 # ══════════════════════════════════════════════
 else:
+    if not st.session_state.get("is_teacher_authenticated", False):
+        st.error("🔒 **存取受限**：尚未通過教師身分驗證。")
+        st.info("請於左上角身分切換中完成教師密碼確認，或點擊下方按鈕返回學生端。")
+        if st.button("⬅️ 返回學生端"):
+            st.session_state.user_role = "student"
+            st.session_state.role_radio_key_version += 1
+            st.session_state.practice_submitted = False
+            st.session_state.practice_answers = {}
+            st.rerun()
+        st.stop()
     st.markdown("""
-    <div class="app-header">
-        <div class="app-title">👨‍🏫 教師管理中心 — 學習單元與學生學習狀況</div>
-        <div class="app-subtitle">輕鬆新增教材與課本內容 · 系統自動建立重點、生活實例與題目 · 掌握全班學習摘要</div>
+    <div class="galaxy-header">
+        <p class="eyebrow">TEACHER OBSERVATORY & CURRICULUM MANAGEMENT</p>
+        <div style="display: flex; align-items: center; gap: 0.9rem;">
+            <span class="brand-mark">師</span>
+            <div>
+                <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700;">教師星系觀測中心</h1>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">教材單元智能萃取 · 全班學習航跡總覽 · AI 適性化支援</p>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 

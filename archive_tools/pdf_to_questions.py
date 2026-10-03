@@ -16,7 +16,8 @@ import time
 from datetime import datetime
 
 import pdfplumber
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 import data_loader
 
@@ -49,10 +50,9 @@ if not api_key:
     print("❌ 找不到 GEMINI_API_KEY，請確認 .env 檔案")
     sys.exit(1)
 
-genai.configure(api_key=api_key)
-# 明確指定 gemini-flash-lite-latest（免費版配額較高）
-MODEL_NAME = "models/gemini-flash-lite-latest"
-model = genai.GenerativeModel(MODEL_NAME)
+client = genai.Client(api_key=api_key)
+# 明確指定 gemini-flash-latest 或 gemini-2.5-flash
+MODEL_NAME = "gemini-2.5-flash"
 print(f"✅ 使用模型：{MODEL_NAME}")
 
 
@@ -135,9 +135,10 @@ def parse_with_gemini(text: str, attempt: int = 0) -> list[dict]:
 """
     try:
         time.sleep(API_DELAY)
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"},
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
         data = json.loads(response.text)
         return data.get("questions", [])

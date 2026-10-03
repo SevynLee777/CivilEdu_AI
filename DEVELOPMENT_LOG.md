@@ -83,8 +83,125 @@
   * **小試身手**：生活化概念練習，去化「考試」壓力；自動評定 `🌱 再看看` / `🌿 再練習` / `🌳 已掌握`，動態展開白話補強、生活比喻與避坑口訣。
   * **我的足跡**：記錄個人各單元掌握狀態與成長足跡，絕不顯示班級排名。
 * **新增核心模組**：
-  * [unit_manager.py](file:///C:/Users/awen8/Exam_TutorAI/unit_manager.py)：學習單元全生命週期管理與 AI 自動包裹生成引擎。
-  * [logger_utils.py](file:///C:/Users/awen8/Exam_TutorAI/logger_utils.py)：重構為無壓力足跡追蹤與教師關懷摘要統計。
+### 🔹 階段 10：視覺星系美學升級、全系統流程分析與專案名稱一致化 (2026-08-30)
+* **視覺星系美學升級 (`app.py`)**：
+  * 導入「學測銀河系」設計語言，採用深邃墨夜水墨底色、思源宋體 (Noto Serif TC) 標題、金色寬字距眉標。
+  * 頂部加入「民」/「師」品牌方印與呼吸燈運行狀態列。
+  * 重點整理改為 01/02 序號手札，生活案例升級為思辨焦點卡片，學習足跡升級為「公民星系觀測站」。
+* **系統架構分析與 Mermaid 流程設計圖**：
+  * 完成全系統宏觀架構圖、學生自主適性自適應學習閉環圖與資料流動狀態圖。
+* **專案名稱一致化 (`CivilEdu_AI`)**：
+  * 將本地專案資料夾重命名為 `CivilEdu_AI`，與 GitHub 遠端倉庫保持完全一致。
+  * 更新 `run.bat`、`README.md` 與獨立開發紀錄檔 `DEVELOPMENT_LOG_20260830.md`。
+
+### 🔹 階段 11：教師身分安全驗證鎖定與預設密碼驗證 (2026-09-29)
+* **身分驗證對話框與鎖定機制 (`app.py`, `.env`)**：
+  * 點擊左上角「👨‍🏫 我是老師」時，自動彈出專屬驗證對話框（`@st.dialog`），要求輸入教師管理密碼以確認為本人。
+  * 支援以環境變數 `TEACHER_PASSWORD` 設定，系統預設密碼為 `MCJH2026`。
+  * **雙層安全機制**：
+    * 支援輸入密碼後直接按 Enter 或點擊「🔑 確認驗證」進行比對。
+    * 若密碼錯誤即時提示「❌ 密碼錯誤，請重新確認！」。
+    * 點擊「返回學生端」或關閉對話框時，身分選擇將自動復原回「🎓 我是學生」，確保學生端無縫切換。
+    * 教師端後台增加雙重保險檢查 (`st.session_state.is_teacher_authenticated`)，未通過驗證者嚴格阻斷存取教材與學生資料。
+    * 教師側邊欄新增「🔒 登出教師 / 返回學生端」一鍵鎖定按鈕，並於切換回學生端時自動清除教師認證狀態。
+
+### 🔹 階段 12：學習內容展示序位重構與觀念心智圖清晰放大優化 (2026-09-29)
+* **學習頁面內容展示序位重構 (`app.py`)**：
+  * 重新調整學生學習端四大模組順序為最佳循序漸進結構：
+    1. 🌟 **輕鬆看懂這堂課**（國中生白話導讀、概念拆解與生活比喻）
+    2. 📌 **核心學習重點**（01/02 序號手札式重點條列）
+    3. 🧠 **核心觀念心智圖**（高對比視覺化結構樹）
+    4. 🏫 **生活與校園情境案例**（Case Study 與思辨焦點）
+* **核心觀念心智圖放大與清晰化優化 (`app.py`)**：
+  * 新增 `format_mindmap_mermaid()` 函式，動態注入高解析度 Mermaid `%%{init: ...}%%` 主題設定（字體加大至 18px、Noto Sans TC、星系深藍與金黃高對比配色）。
+  * 導入全套自訂 CSS 樣式：
+    * 強制 SVG 寬度展開（`min-width: 680px`, `max-width: 1000px`），支援橫向平移。
+    * 提升節點標籤字體為 16px/18px 粗體、純白文字與柔和光暈。
+    * 節點框線加粗至 2.2px（水藍色），頂層節點加粗金邊（3px）。
+    * 連線與箭頭全面加粗至 2.5px（金黃色），大幅提升辨識度與閱讀舒適度。
+
+### 🔹 階段 13：Windows 應用控制原則衝突排查與 Pandas / PyArrow 載入防禦修復 (2026-09-30)
+* **Windows 11 Smart App Control (SAC) 根因定位**：
+  * 排查啟動時拋出的 `ImportError: DLL load failed while importing _compute: An Application Control policy has blocked this file.`。
+  * 經由 Windows 事件日誌確認因 Smart App Control（原則狀態 1）阻擋未具備微軟雲端信譽之 `pyarrow._compute.cp311-win_amd64.pyd`。
+* **Pandas 相容層相容性強化與優雅降級**：
+  * 於 `pandas/compat/pyarrow.py` 檢測區塊中同步驗證 `import pyarrow.compute as pc`，當遭遇系統原則阻擋時及時捕獲例外。
+  * 自動降級將 `HAS_PYARROW` 標記為 `False`，避免存取器崩潰並平順回退至原生/NumPy 運算引擎。
+* **啟動與全功能驗證**：
+  * 驗證 `import pandas as pd`、`import app` 與 Streamlit 伺服器啟動皆 100% 恢復正常。
+
+### 🔹 階段 14：核心觀念心智圖直式瀏覽重構與字體放大極致優化 (2026-10-03)
+* **直式瀏覽重構（消除橫向橫滑，改為直向自然閱讀）**：
+  * 原先 `graph TD` 橫向展開會讓同一層級之多個節點（8~11 個）水平排開，導致寬度被極度拉寬，產生縮放後字體過小或需橫向滑動的困擾。
+  * 全面重構為 `graph LR` 直式樹狀結構（左側為單元主題，中間為核心大分類，右側由上至下垂直排開各知識點細節）。
+  * 於 `app.py` 之 `format_mindmap_mermaid()` 函式加入動態正則轉換，自動將既有或新增之 `TD` / `TB` 語法轉為 `LR`，確保相容性與無縫升級。
+* **心智圖文字特大化與 CSS 視覺對比增強**：
+  * Mermaid 初始化指令 `%%{init: ...}%%` 中注入 `fontSize: '22px'`、`nodeSpacing: 35`、`rankSpacing: 65`、`padding: 20`，使渲染引擎自底層計算寬裕的節點邊界。
+  * 全面升級 CSS 樣式：
+    * 一般文字節點由 16px 提升至 **`20px !important`**，字重提升至 700 粗體。
+    * 第一層主要核心根節點（A節點）特大字體提升至 **`22px !important`**，900 極粗體配金黃色高亮。
+    * 節點框線加粗至 `2.5px`（水藍色），第一層節點外框加粗至 `3.5px`（金黃色），箭頭與連接線加粗至 `2.8px`。
+    * 移除限制寬度的 `min-width: 680px`，設定自適應寬度 `max-width: 920px`，於手機、平板與桌機皆能自然直式滾動閱讀。
+* **教材庫與生成範本全面同步**：
+  * 同步更新 `units_db.json`、`unit_manager.py` 之 Prompt 範例、Fallback 備用資料與內建第 1、2 課心智圖為 `graph LR`。
+
+### 🔹 階段 15：全面遷移至官方最新 Google GenAI SDK (`google-genai`) (2026-10-03)
+* **棄用警告排除與 SDK 升級**：
+  * 因 Google 官方正式終止舊版 `google-generativeai` 套件維護並拋出 `FutureWarning`，全面升級安裝官方新世代 `google-genai` SDK（2.28.0+）。
+* **API 呼叫架構現代化重構**：
+  * 重構 [`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) 的 Gemini 呼叫邏輯：
+    * 改為 `from google import genai` 與 `from google.genai import types`。
+    * 使用標準 `client = genai.Client(api_key=api_key)` 初始化。
+    * 使用 `client.models.generate_content(...)` 與 `types.GenerateContentConfig(response_mime_type="application/json")` 進行結構化內容生成。
+    * 更新備選模型陣列為官方標準模型：`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-2.5-flash-lite`, `gemini-flash-latest`, `gemini-pro-latest`。
+* **周邊依賴與歸檔工具同步**：
+  * 更新 [`requirements.txt`](file:///C:/Users/awen8/CivilEdu_AI/requirements.txt) 將 `google-generativeai` 替換為 `google-genai`。
+  * 同步更新 [`archive_tools/pdf_to_questions.py`](file:///C:/Users/awen8/CivilEdu_AI/archive_tools/pdf_to_questions.py) 之導入與 API 呼叫方式。
+* **驗證**：
+  * 執行 `AppTest` 及系統導入測試，確認全專案 0 警告、0 例外，完全消除棄用提示。
+
+### 🔹 階段 16：心智圖輔助文案精簡、快速導航至小試身手與題庫擴增至 8 題 (2026-10-03)
+* **心智圖文案精簡**：
+  * 依需求移除心智圖下方之「💡 直式樹狀心智圖：由左至右開展、直向向下延伸，字體特大清晰，免橫向滑動即可順暢瀏覽完整架構。」提示文案，使畫面更加簡潔俐落。
+* **重點學習頁一鍵直達「✏️ 小試身手」**：
+  * 於重點與生活案例末端升級導引卡片，加入顯目的 `🚀 前往【✏️ 小試身手】觀念練習（共 8 題）` 快速跳轉按鈕。
+  * 結合 Streamlit 1.59 `st.tabs` 之 `default` 狀態控制，點擊後即刻透過 Session State 程式化切換至「✏️ 小試身手」分頁，省去學生需手動滑至頁面頂端切換 Tab 的繁瑣操作。
+* **小試身手練習題庫由 4 題全面擴增至 8 題**：
+  * **單元資料庫 ([`units_db.json`](file:///C:/Users/awen8/CivilEdu_AI/units_db.json))**：
+    * 第 1 課（國家與民主政治）：新增政黨政治、領土範圍、主權在民、政務官與事務官責任區分等 4 道情境單選題（共 8 題，`q1` ~ `q8`），並同步補齊政黨政治與主權在民之專屬充電站補強指南。
+    * 第 2 課（憲法與權利保障）：新增受益權、參政權、比例原則、命令牴觸法律無效等 4 道情境單選題（共 8 題，`q1` ~ `q8`），並同步補齊受益權、參政權、比例原則之專屬補強指南。
+  * **AI 生成模組 ([`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py))**：
+    * 全面更新 AI 提示詞規範，指定教師新增教材時系統自動萃取出 8 道生活情境單選題及相對應概念之補強指南。
+    * 同步升級預設備用包裹（Fallback Bundle）為 8 道素養題目與內建第 1、2 課資料。
+* **自動化測試與回歸驗證**：
+  * 通過 `AppTest` 完整自動化測試：包含單元切換、Tab 程式化跳轉、8 題表單作答送出、成績計算及補強建議渲染無任何異常。
+
+### 🔹 階段 17：公民 AI 助教隨身問獨立置放為專屬分頁 (2026-10-03)
+* **分頁架構清晰化重組**：
+  * 將原本嵌套於「✏️ 小試身手」頁面底部的「💬 公民 AI 助教隨身問」完全解耦移出。
+  * 於「✏️ 小試身手」與「🌱 我的足跡」之間獨立新增為第 3 個專屬分頁：
+    1. `📖 開始學習`
+    2. `✏️ 小試身手`
+    3. `💬 公民 AI 助教隨身問`
+    4. `🌱 我的足跡`
+* **操作動線與體驗優化**：
+  * 使「✏️ 小試身手」專注於題目作答、評分結果與觀念充電站解析，大幅減少頁面長度與滾動負擔。
+  * 「💬 公民 AI 助教隨身問」擁有獨立的提問介面與問答歷史氣泡流，學生無論在課前預習、課中練習或課後複習時，皆能隨時點選專屬分頁與 AI 助教互動。
+* **驗證**：
+  * 通過 `AppTest` 自動化驗證，4 大分頁切換順暢，輸入問答、表單狀態與歷史紀錄均正常運作。
+
+### 🔹 階段 18：「前往小試身手」跳轉按鈕修復與響應式分頁狀態綁定 (2026-10-03)
+* **問題根本原因分析**：
+  * 原先分頁由 `st.tabs` 宣告時未配置 `key` 與 `on_change="rerun"`，處於非託管（Unmanaged/Stateless）狀態，Streamlit 前端 React 元件僅在首次加載時讀取初始值，後續 rerun 時前端 DOM 不會響應狀態切換。
+  * 原先按鈕使用 `if st.button(...): st.session_state.student_tab_selection = ...`，在 Streamlit 生命週期中若 widget 帶有 key 則會在元件實例化後拋出 `StreamlitAPIException` 阻止寫入。
+* **技術修復與優化**：
+  * 實作專屬回呼函數 `switch_to_practice_tab()`，在按鈕點擊階段（生命週期最優先階段）更新 `st.session_state.student_tab_selection = "✏️ 小試身手"`。
+  * 跳轉按鈕綁定 `on_click=switch_to_practice_tab`，解決跨元件執行時序衝突。
+  * `st.tabs` 配置狀態鍵與自動重繪模式：`key="student_tab_selection", on_change="rerun"`，建立 Streamlit 雙向狀態綁定，使按鈕點擊後前端分頁可 100% 準確切換至【✏️ 小試身手】。
+  * 補齊側邊欄單元切換、教師登出時對分頁狀態的安全防護與重置回【📖 開始學習】。
+* **自動化整合驗證**：
+  * 通過 `AppTest` 完整模擬測試：點擊「🚀 前往【✏️ 小試身手】觀念練習」後成功跳轉至「✏️ 小試身手」，接續作答、提交評分、切換單元等完整生命週期皆無任何異常。
+
 
 ---
 
@@ -92,13 +209,16 @@
 
 | 檔案/資料夾名稱 | 類型 | 說明 |
 | :--- | :--- | :--- |
-| [app.py](file:///C:/Users/awen8/Exam_TutorAI/app.py) | Python 主程式 | Streamlit 介面（學生端/教師端身分切換與學習流程） |
-| [unit_manager.py](file:///C:/Users/awen8/Exam_TutorAI/unit_manager.py) | 核心模組 | 學習單元管理、AI 自動分析與生成重點、案例、題目與補救 |
-| [logger_utils.py](file:///C:/Users/awen8/Exam_TutorAI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成 |
-| [units_db.json](file:///C:/Users/awen8/Exam_TutorAI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、案例、題目、心智圖） |
-| [config.json](file:///C:/Users/awen8/Exam_TutorAI/config.json) | 設定檔 | 設定國中八年級公民科目名稱與 AI 助教角色 |
-| [student_logs/](file:///C:/Users/awen8/Exam_TutorAI/student_logs) | 資料夾 | 學生個人學習歷程 JSON 日誌 |
-| [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/Exam_TutorAI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程紀錄檔 |
+| [app.py](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | Streamlit 介面（公民思辨星系版，學生端/教師端雙獨立流程） |
+| [unit_manager.py](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) | 核心模組 | 學習單元管理、AI 自動分析與生成重點、案例、題目與補救 |
+| [logger_utils.py](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成 |
+| [units_db.json](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、案例、題目、心智圖） |
+| [config.json](file:///C:/Users/awen8/CivilEdu_AI/config.json) | 設定檔 | 設定國中八年級公民科目名稱與 AI 助教角色 |
+| [student_logs/](file:///C:/Users/awen8/CivilEdu_AI/student_logs) | 資料夾 | 學生個人學習歷程 JSON 日誌 |
+| [DEVELOPMENT_LOG_20260830.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260830.md) | 文件 | 2026-08-30 本日開發紀錄檔 |
+| [DEVELOPMENT_LOG_20260929.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260929.md) | 文件 | 2026-09-29 本日開發紀錄檔 |
+| [DEVELOPMENT_LOG_20260930.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260930.md) | 文件 | 2026-09-30 本日開發紀錄檔 |
+| [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程主紀錄檔 |
 
 ---
 
