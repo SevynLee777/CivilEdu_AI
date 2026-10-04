@@ -253,8 +253,9 @@
 | [DEVELOPMENT_LOG_20260929.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260929.md) | 文件 | 2026-09-29 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20260930.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260930.md) | 文件 | 2026-09-30 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20261003.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261003.md) | 文件 | 2026-10-03 本日開發紀錄檔 |
-| [DEVELOPMENT_LOG_20261004.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 文件 | 2026-10-04 本日開發紀錄檔 |
+| [DEVELOPMENT_LOG_20261004.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 文件 | 2026-10-04 本日完整開發紀錄檔（階段 19～24） |
 | [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程主紀錄檔 |
+| [README.md](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 文件 | 專案說明文件（含系統分析與 Mermaid 網站流程圖） |
 
 ---
 

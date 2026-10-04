@@ -1,89 +1,59 @@
-# 📑 CivilEdu_AI — 2026-10-04 開發紀錄檔 (Development Log)
+# 📑 CivilEdu_AI — 2026-10-04 本日完整開發紀錄檔 (Development Log)
 
 **專案名稱**：CivilEdu_AI 國中公民思辨星系 ｜ AI 智慧自主學習館  
 **開發日期**：2026-10-04  
-**核心主題**：首頁進入防禦機制、學習資料條件化載入、即時動態啟航指引檢核看板重構
+**核心主題**：首頁進入防禦機制、全載具流體字級優化、經典標籤頁樣式還原、系統全面分析、Mermaid 流程設計圖與專案手冊重構  
 
 ---
 
-## 🎯 一、 今日開發與需求實作重點 (Key Highlights)
+## 🎯 一、 今日開發里程碑總覽 (Milestones Summary)
 
-### 1. 🛡️ 首頁進入防禦與學習資料條件載入重構
-- **需求背景**：
-  - 過去學生進入網站時，系統預設載入「我是學生」並直接在右側呈現「第 1 課：國家與民主政治」的講義重點與 4 大分頁。
-  - 使用者期望在初始進入時**不要直接出現學習資料**，必須等使用者於左側邊欄：
-    1. 選定身分（學生或老師）
-    2. 選擇班級（如 801 ~ 821）
-    3. 輸入姓名（非空字串）
-    4. 選定學習單元（非佔位項目）
-    完成後才在右欄動態加載呈現學習資料。
+今日（2026-10-04）共完成 **6 個關鍵迭代階段 (Phase 19 ~ Phase 24)**，涵蓋前端互動邏輯、自適應響應式設計、Streamlit 1.59+ 底層適配、以及系統架構文件化：
 
-- **技術實作細節 (`app.py`)**：
-  1. **初始身分重置**：
-     - 將 `st.session_state.user_role` 的預設值由 `"student"` 調整為 `"none"`。
-     - 側邊欄身分單選器新增預設選項：`["請選擇操作身分...", "🎓 我是學生", "👨‍🏫 我是老師"]`。
-  2. **單元佔位項與狀態重置**：
-     - 單元選單新增首項 `"-- 請選擇學習單元 --"`，移除初次載入自動指向 `all_units[0]` 的預選行為。
-     - `st.session_state.current_unit_id` 初始為 `None`。
-  3. **嚴格展示路由判斷 (`is_student_ready`)**：
-     - 建立路由門檻：
-       ```python
-       is_student_ready = (
-           st.session_state.user_role == "student"
-           and bool(st.session_state.student_name.strip())
-           and (st.session_state.current_unit_id is not None)
-       )
-       is_teacher_ready = (
-           st.session_state.user_role == "teacher"
-           and st.session_state.get("is_teacher_authenticated", False)
-       )
-       ```
-     - 僅在 `is_student_ready` 為 `True` 時，右欄才展開學生銀河頂部 Header 與 4 大分頁（📖 開始學習、✏️ 小試身手、💬 AI 助教、🌱 我的足跡）。
-  4. **視覺醒目標題強化與版面極簡化**：
-     - **加大強調主要告示**：以特大字級（`2.15rem` 思源宋體）、琥珀金色光暈邊框（`2.5px solid #f4d38b`）與呼吸燈亮點，置中特寫強調「**航行準備中 ｜ 請先完成左欄資料登記**」，直觀醒目。
-     - **移除繁瑣步驟說明**：完全移除「啟航指引：請於左側邊欄完成設定以展開學習」段落及 1️⃣ ~ 4️⃣ 繁瑣填寫說明卡，維持畫面簡潔大方。
-     - **精簡星系特色功能導覽**：將四大功能（白話重點心智圖、8題情境練習、AI助教隨身問、自主學習足跡）文案濃縮為單行精準重點，消除冗長說明。
-  5. **操作靈活度強化**：
-     - 學生在進入學習後，隨時可於側邊欄切換單元，或點擊「🔄 重新選定單元 / 返回導引」按鈕一鍵退回指引看板，且學生姓名仍會被安全保留。
-     - 教師端點擊「🔒 登出教師 / 返回首頁」時，安全清除憑證並返回首頁引導視窗。
-  6. **側邊欄單元下拉選單視窗遮擋修復**：
-     - **問題現象**：左欄「選擇學習單元」下拉選單展開時，第二單元（第2課）落於螢幕視窗底緣之外，使用者必須手動縮小瀏覽器頁面才能看到。
-     - **優化解法**：
-       - 將側邊欄頂部預設 `6rem` 內邊距大幅緊湊化至 `1.2rem`，並壓縮各區塊標題與分割線間距。
-       - 將學生基本資料（班級、座號、姓名）重構為單列 3 欄緊湊排版（`columns([1, 1, 1.4])`），將「選擇學習單元」整體上移逾 200px。
-       - 注入 BaseWeb Popover 下拉清單高度優化（`max-height: 240px; min-height: 36px`），確保所有單元展開時 100% 完整直接呈現於可視範圍內。
-
----
-
-## 🧪 二、 自動化回歸測試成果 (Verification)
-
-透過 Streamlit 原生測試模組 `streamlit.testing.v1.AppTest` 進行全流程自動化模擬驗證：
-1. **初始狀態檢驗**：訪客進入首頁，驗證 `len(at.tabs) == 0`，未出現學習資料與分頁，測試通過。
-2. **單選學生未填資料**：切換為學生但姓名與單元為空，驗證 `len(at.tabs) == 0`，測試通過。
-3. **輸入姓名但未選單元**：輸入「王小明」，驗證 `len(at.tabs) == 0`，測試通過。
-4. **選定單元完整呈現**：下拉選擇單元，驗證 `len(at.tabs) == 4`（開始學習、小試身手、AI助教、我的足跡），測試通過。
-5. **重選單元返回指引**：點擊重設單元，驗證順利返回引導狀態且姓名保留，測試通過。
-6. **教師端身分驗證**：選擇教師並完成密碼驗證後，驗證 `len(at.tabs) == 2`（我的教材、學習狀況），測試通過。
-
----
-
-## 🛠️ 三、 詳細修訂檔案對照表
-
-| 檔案名稱 / 路徑 | 類型 | 修訂說明 |
+| 階段 | 主題 | 核心成果摘要 |
 | :--- | :--- | :--- |
-| [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | 1. 調整 `user_role` 初始為 `"none"`。<br>2. 側邊欄增加身分與單元佔位項。<br>3. 實作 `is_student_ready` 嚴格條件路由。<br>4. 建立全載具自適應流體字級體系（`--fluid-*` 變數）。<br>5. 側邊欄改為班級/座號雙欄+姓名獨立列，消除文字擠壓。<br>6. 全站淘汰硬編碼小字體，全面保底 15px~16px 清晰易讀。 |
-| [`DEVELOPMENT_LOG.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 主開發日誌 | 補充階段 19、20 與階段 21（四大學習模組頁籤與標題特大化強調）。 |
-| [`DEVELOPMENT_LOG_20261004.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 本日日誌 | 2026-10-04 當日開發紀錄檔（新增與更新）。 |
+| **Phase 19** | **首頁進入防禦與條件載入** | 實作 `is_student_ready` 四條件門檻（身分、班級座號、姓名非空、單元選定），首頁呈現即時動態檢核看板，防範未登記直接作答。 |
+| **Phase 20** | **全載具自適應流體排版** | 導入 CSS `clamp()` 流體字級體系（`--fluid-*`），側邊欄重構為「班級/座號雙欄 + 姓名全寬」，徹底消除文字擠壓與首屏單元遮擋。 |
+| **Phase 21** | **四大學習模組頁籤與標題放大** | 針對 `📖 開始學習`、`✏️ 小試身手`、`💬 公民 AI 助教隨身問`、`🌱 我的足跡` 進行醒目視覺強化，模組內頁標題同步特大化。 |
+| **Phase 22** | **React-Aria 頁籤選擇器適配** | 深入 Streamlit 1.59+ `@react-aria/tabs` DOM 架構，覆蓋 `[data-testid="stTab"]` 與 `.react-aria-Tab` 內嵌小字號限制。 |
+| **Phase 23** | **回復經典標籤頁導航樣式** | 依使用者回饋回復膠囊標籤頁本體（`border-radius: 999px`）與一體化水平基線，消除過度方塊化，純粹放大字級（19px~22px）。 |
+| **Phase 24** | **系統全面分析與 Mermaid 流程圖** | 產出完整系統分析報告、標準化 Mermaid 網站流程設計圖，並重構 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) 為現代化專案說明手冊。 |
 
 ---
 
-## 🎨 四、 全載具自適應流體排版與字體優化 (Phase 20)
+## 🛡️ 二、 階段 19：首頁進入防禦與學習資料條件載入重構
 
-### 1. 核心問題與成因剖析
-- **成因一（側邊欄三欄擁擠）**：先前為縮減側邊欄高度，將班級、座號、姓名擠在同一行（`columns([1, 1, 1.4])`），在側邊欄約 300px 寬度下，各輸入欄位僅分得 70~90px，導致標籤與文字緊縮，視覺感受過小。
-- **成因二（硬編碼小字體遺留）**：部分 HTML 卡片、眉標、副標題與時間戳記寫死為 `0.72rem` (約 11.5px)、`0.82rem` (約 13px) 或 `0.88rem` (約 14px)，在不同載具解析度下顯得過於細小難讀。
+### 1. 需求背景
+原系統於開啟網站時，預設身分為學生並立即於右側加載第一課講義與分頁，未引導學生登記班級姓名與選取單元，導致歷程歸檔缺乏鑑別度。
 
-### 2. 重構與優化措施
+### 2. 技術實作架構 (`app.py`)
+1. **身分初始狀態防護**：
+   - `st.session_state.user_role` 初始為 `"none"`。
+   - 側邊欄身分選單新增佔位項 `["請選擇操作身分...", "🎓 我是學生", "👨‍🏫 我是老師"]`。
+2. **單元選擇防護**：
+   - 下拉選單新增首項 `"-- 請選擇學習單元 --"`，`current_unit_id` 預設為 `None`。
+3. **嚴格四條件展示門檻 (`is_student_ready`)**：
+   ```python
+   is_student_ready = (
+       st.session_state.user_role == "student"
+       and bool(st.session_state.student_name.strip())
+       and (st.session_state.current_unit_id is not None)
+   )
+   ```
+4. **即時動態「航行準備中」檢核看板**：
+   - 未就緒時，主畫面動態顯示 4 大步驟完成狀態（未完成標示 ⏳，已完成標示 ✅），輔以星系特色功能簡介。
+5. **首屏單元下拉選單視窗遮擋修復**：
+   - 將側邊欄頂部內距由 `6rem` 緊湊化至 `1.2rem`，消除捲動條負擔，確保所有單元展開時 100% 完整直接呈現於第一屏。
+
+---
+
+## 🎨 三、 階段 20：全載具自適應流體排版與字體優化
+
+### 1. 核心問題與成因
+- **側邊欄三欄擁擠**：原先將班級、座號、姓名擠在同一行（`columns([1, 1, 1.4])`），各欄位僅 70~90px，導致標籤文字緊縮。
+- **寫死小字體**：部分 HTML 標籤寫死為 `0.72rem` (約 11.5px) 或 `0.88rem` (約 14px)，在不同載具解析度下過小難讀。
+
+### 2. 優化措施
 1. **全載具自適應流體字級體系 (`:root`)**：
    - `--fluid-base`: `clamp(15.5px, 0.4vw + 14.5px, 17.5px)`
    - `--fluid-h1`: `clamp(1.75rem, 1.8vw + 1.25rem, 2.35rem)`
@@ -92,100 +62,187 @@
    - `--fluid-h4`: `clamp(1.1rem, 0.6vw + 0.95rem, 1.35rem)`
    - `--fluid-body`: `clamp(1.02rem, 0.35vw + 0.96rem, 1.16rem)`
    - `--fluid-sub`: `clamp(0.95rem, 0.25vw + 0.9rem, 1.05rem)`
-2. **全域元件防護涵蓋**：
-   - 全面覆蓋 Streamlit 各元件（`stRadio`, `stCheckbox`, `stSelectbox`, `stTextInput`, `stAlert`, `stExpander`, `stCaptionContainer`），保證正文皆不小於 16px、輔助字級不小於 15px。
-3. **側邊欄學生基本資料結構優化**：
+2. **側邊欄學生基本資料排版重構**：
    - 第一列：`col_c, col_s = st.columns(2)` 放置班級與座號（各 ~140px，間距舒展無折行）。
-   - 第二列：全寬姓名輸入框（~280px，輸入體驗自然寬敞）。
-   - 保留頂部 `padding-top: 1.2rem` 緊湊設計，使「選擇學習單元」選單展開時依然在第一屏可視範圍內，不必縮小網頁。
-4. **載具斷點自適應響應**：
-   - 手機端 (`<= 640px`)：保底字級 15.5px。
-   - 平板端 (`641px ~ 1024px`)：字級 16.5px。
-   - 一般桌機 (`1025px ~ 1440px`)：字級 17px。
-   - 大螢幕桌機 (`> 1440px`)：字級 17.5px。
+   - 第二列：全寬姓名輸入框（~280px，輸入體驗寬敞）。
+3. **全域元件防護**：
+   - 全面覆蓋 Streamlit 各元件（`stRadio`, `stCheckbox`, `stSelectbox`, `stTextInput`, `stAlert`），保證正文皆不小於 16px、輔助字級不小於 15px。
 
 ---
 
-## 🚀 五、 四大學習模組頁籤與標題特大化、高對比醒目標示 (Phase 21)
+## 🚀 四、 階段 21 ~ 22：頁籤選擇器修復與特色導覽升級
 
-### 1. 調整項目：
-- 🎯 **指定強化對象**：
-  1. `📖 開始學習`
-  2. `✏️ 小試身手`
-  3. `💬 公民 AI 助教隨身問`
-  4. `🌱 我的足跡`
+### 1. Streamlit 1.59+ 頁籤 DOM 根本原因分析
+Streamlit 1.59 將頁籤底層由 BaseWeb 遷移至 `@react-aria/tabs`，頁籤本體轉為 `<div role="tab" data-testid="stTab" class="react-aria-Tab">`，且強制內嵌 `fontSize: 14px`。
 
-### 2. 優化成果：
-1. **頁籤切換按鈕全面升級為星系奢華發光膠囊卡片**：
-   - **字體加大**：字級大幅提升至 `clamp(1.28rem, 0.6vw + 1.18rem, 1.55rem)`（約 22px ~ 26.5px）。
-   - **字重強化**：平時狀態為 `800`，點選啟動狀態加粗為 `900`。
-   - **視覺強調**：未選狀態具備高對比銀河深藍底色與 `2px` 淺藍發光外框；選中狀態呈現漸層藍底、`2.8px` 琥珀金高亮邊框、柔光金色陰影與文字立體外發光效果。
-   - **大觸控區**：按鈕內距擴大為 `0.82rem 1.8rem`，手機平板點擊更順手。
-2. **各模組內頁標題同步特大化**：
-   - 點入各分頁後，頂部標題統一升級為二級顯眼大標題（`##`，`--fluid-h2`）：
-     - `## 📖 開始學習 ｜ ...`
-     - `## ✏️ 小試身手 ｜ ...`
-     - `## 💬 公民 AI 助教隨身問 ｜ ...`
-     - `## 🌱 我的足跡 ｜ 自主學習歷程記錄`
-3. **首頁功能導覽卡片同步強調**：
-   - 特色導覽卡片對齊四模組名稱，標題放大至 `--fluid-h3`（字重 800），並加入彩色立體左側邊條（金、琥珀、天藍、翠綠），形成全站一致的視覺指引。
+### 2. 選擇器深度適配
+全面覆蓋 `div[data-testid="stTabs"] [data-testid="stTab"]`、`[role="tab"]` 與 `.react-aria-Tab`，並設定 `height: auto !important`，徹底消除舊版選擇器無法命中問題。
 
 ---
 
-## 💎 六、 Streamlit 1.59+ React-Aria 頁籤選擇器修復與四特色導覽卡片特大加粗升級 (Phase 22)
+## 🎯 五、 階段 23：回復經典標籤頁導航樣式與純粹放大字級
 
-### 1. 深度根本原因調查與突破：
-- **核心盲點**：經深入探查 Streamlit 1.59.1 前端核心源碼，發現 Streamlit 最新架構已將頁籤模組由舊版 BaseWeb 全面遷移至 `@react-aria/tabs`。
-- **失效原因**：頁籤生成的 DOM 結構不再是 `<button data-baseweb="tab">`，而是 `<div role="tab" data-testid="stTab" class="react-aria-Tab">`，且 Streamlit 在該元素上強制內嵌了 `fontSize: e.fontSizes.sm` (14px) 與 `height: e.sizes.tabHeight` (40px)。因此舊版針對 `button` 的樣式完全無法命中該元素！
+### 1. 調整動機
+使用者回饋先前過度卡片化導致頁籤遺失「標籤頁」質感，變成獨立方塊連結。期望回復原本優雅純粹的標籤頁外觀，僅保留「加大字級」核心需求。
 
-### 2. 優化修復措施：
-1. **全面覆蓋 React-Aria 選擇器體系**：
-   - 納入 `div[data-testid="stTabs"] [data-testid="stTab"]`、`[role="tab"]`、`.react-aria-Tab`。
-   - 覆蓋高度與文字：`height: auto !important; min-height: 54px !important;`。
-   - 字體正式拉升至 `clamp(1.35rem, 0.65vw + 1.22rem, 1.65rem)`（約 **24px ～ 28px**），字重提升為 `800` / `900`。
-   - 選中狀態高亮金框（`3px solid var(--galaxy-amber)`）與金黃外發光（`text-shadow: 0 0 14px rgba(244, 211, 139, 0.7)`）全面精準生效。
-2. **「🌟 星系特色功能導覽」四個卡片升級特大加粗強調版**：
-   - 卡片標題（`📖 開始學習`、`✏️ 小試身手`、`💬 公民 AI 助教隨身問`、`🌱 我的足跡`）：放大至 `clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem)`（約 **24px ～ 30px**），字重 `900` 特粗。
-   - 卡片內文說明：放大至 `clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem)`（約 **19px ～ 22px**），字重 `500` 高對比冰白，行高 `1.7`。
----
-
-## 🎯 七、 回復經典標籤頁導航樣式與純粹放大字級 (Phase 23)
-
-### 1. 調整動機：
-- 使用者回饋先前調整過度卡片化，頁籤遺失了原有的「標籤頁」質感，變成塊狀連結（方塊連結）。
-- 期望維持原本優雅純粹的標籤頁外觀，僅保留「加大字級」核心需求。
-
-### 2. 優化成果：
-1. **回復經典標籤頁導航架構**：
-   - 移除過度的方塊厚外框、深藍底色與過大圓角，還原經典膠囊標籤頁（`border-radius: 999px`）。
-   - 保留頁籤底部水平基線（`border-bottom: 1.5px solid var(--galaxy-line)`）。
-   - 未選中標籤：透明背景，滑鼠懸停時微柔光（`rgba(208, 224, 238, 0.08)`）。
-   - 選中標籤：保持經典底色（`rgba(208, 224, 238, 0.1)`）搭配琥珀金色專屬下底線（`border-bottom: 3px solid var(--galaxy-amber)`），文字呈現金黃高亮。
+### 2. 優化成果
+1. **回復經典標籤頁外觀**：
+   - 移除厚重方框、深藍底色與大圓角，還原經典膠囊標籤頁（`border-radius: 999px`）。
+   - 頁籤列下方具備一體連貫的柔和分隔線（`border-bottom: 1.5px solid var(--galaxy-line)`）。
+   - 選中狀態呈現經典琥珀金下底線指示器（`border-bottom: 3px solid var(--galaxy-amber)`）。
 2. **純粹字級加大（19px ～ 22px）**：
-   - 頁籤文字字級設定為 `clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem)`，字重 `600`（未選）/ `700`（選中），精準覆蓋 Streamlit 1.59+ `[data-testid="stTab"]` 與 `button`，清晰易讀且不過度膨脹。
+   - 頁籤文字字級設定為 `clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem)`，字重 `600`（未選）/ `700`（選中）。
 3. **還原特色功能導覽卡片與內頁標題**：
-   - 首頁導覽卡片還原原版標題與簡潔排版（`📖 白話重點 ＆ 直式心智圖`、`✏️ 8 題素養情境小試身手` 等）。
-   - 內頁章節標題還原為 `###`，風格清爽聚焦。
+   - 首頁導覽卡片還原簡潔直觀的原版標題排版（`📖 白話重點 ＆ 直式心智圖` 等）。
+   - 內頁各章節頂部標題還原為 `###`，風格清爽聚焦。
 
 ---
 
-## 📊 八、 系統全面分析、完整網站流程圖（Mermaid Chart）與 README.md 全新重構 (Phase 24)
+## 📊 六、 階段 24：系統全面分析、Mermaid 流程圖與專案手冊重構
 
-### 1. 調整背景：
-- 配合系統功能全面升級（身分切換、教師安全驗證、4 條件啟航防禦、4 大自主學習分頁、AI 助教隨身問），進行系統架構與業務流程全面分析梳理。
-- 繪製高相容性 Mermaid 流程設計圖，並同步重構 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) 為現代化專案展示手冊。
+### 1. 系統分析精華
+- **3 大角色權限**：未就緒訪客（防禦導引）、學生端（4 大自主學習模組）、教師端（密碼驗證後台）。
+- **4 條件啟航防禦機制**：身分 ➔ 班級/座號 ➔ 姓名非空 ➔ 單元選定。
+- **4 大核心學習模組**：開始學習、小試身手（8 題素養情境）、AI 助教隨身問（Gemini 2.5 Flash）、我的足跡（歷程分析）。
 
-### 2. 重點成果：
-1. **完整系統分析報告產出**：
-   - 梳理 3 大角色狀態（未就緒訪客、學生端、教師端）與權限邊界。
-   - 詳述四條件動態防禦機制（`Ready 門檻`）之狀態機運作原理。
-   - 模組化分析四大核心學習頁籤與資料持久層（`units_db.json`、`student_logs/`）。
-2. **Mermaid 流程設計圖標準化**：
-   - 繪製涵蓋全生命週期的 `flowchart TD`，使用 5 大標準子圖（Entry, Guard, Teacher, Student, DataStorage）。
-   - 節點文字雙引號化、換行 `<br/>` 標準化，100% 相容 Mermaid Chart、Mermaid Live Editor、GitHub Markdown。
-3. **專案手冊 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) 全面現代化**：
-   - 淘汰舊版初始草稿，替換為最新八年級公民思辨星系架構、系統分析、流程圖與技術堆疊說明。
+### 2. 最新網站流程設計圖 (Mermaid Chart)
+```mermaid
+flowchart TD
+    %% 樣式設定
+    classDef startNode fill:#1E3A8A,stroke:#60A5FA,stroke-width:2px,color:#FFFFFF;
+    classDef decisionNode fill:#312E81,stroke:#F59E0B,stroke-width:2px,color:#FFFFFF;
+    classDef pageNode fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF;
+    classDef actionNode fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#FFFFFF;
+    classDef guardNode fill:#451A03,stroke:#F97316,stroke-width:2px,color:#FFFFFF;
+    classDef dataNode fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#FFFFFF;
 
+    subgraph SG_Entry ["🌐 進入系統與身分選擇"]
+        Start(["使用者連線至網站 (app.py)"]):::startNode
+        InitSession["初始化 Session 狀態<br/>(身分=none, 單元=None)"]:::actionNode
+        SelectRole{"左側邊欄選擇身分"}:::decisionNode
 
+        Start --> InitSession
+        InitSession --> SelectRole
+    end
 
+    subgraph SG_Guard ["🚀 首頁啟航防禦機制"]
+        ShowDefense["主畫面：航行準備中<br/>• 4步驟即時狀態檢核表<br/>• 四大模組特色導覽卡片"]:::guardNode
+        CheckReady{"檢查啟航防禦條件：<br/>姓名非空 且 已選單元？"}:::decisionNode
+        ResetRole["重置身分至未選擇 (none)"]:::actionNode
 
+        SelectRole --> |"未選擇 (none)"| ShowDefense
+        ResetRole --> ShowDefense
+        CheckReady --> |"否 (條件未滿足)"| ShowDefense
+    end
+
+    subgraph SG_Teacher ["👨‍🏫 教師管理後台流程"]
+        CheckTeacherAuth{"是否已驗證密碼？"}:::decisionNode
+        TeacherDialog["彈出密碼驗證視窗<br/>(teacher_auth_dialog)"]:::actionNode
+        CheckPwd{"驗證密碼"}:::decisionNode
+        TeacherVerified["驗證成功<br/>(is_teacher_authenticated=True)"]:::actionNode
+        TeacherDashboard["主畫面：👨‍🏫 教師管理儀表板"]:::pageNode
+        T_Manage["單元管理<br/>(新增/編輯/刪除/AI生成)"]:::actionNode
+        T_Analytics["學生歷程看板<br/>(全班統計/作答率/個別足跡)"]:::actionNode
+        T_Export["報表匯出<br/>(下載 CSV / JSON 報表)"]:::actionNode
+        T_Logout["登出管理端"]:::actionNode
+
+        SelectRole --> |"👨‍🏫 我是老師"| CheckTeacherAuth
+        CheckTeacherAuth --> |"未驗證"| TeacherDialog
+        TeacherDialog --> CheckPwd
+        CheckPwd --> |"密碼正確"| TeacherVerified
+        CheckPwd --> |"取消或關閉"| ResetRole
+        CheckTeacherAuth --> |"已驗證"| TeacherVerified
+        TeacherVerified --> TeacherDashboard
+
+        TeacherDashboard --> T_Manage
+        TeacherDashboard --> T_Analytics
+        TeacherDashboard --> T_Export
+        TeacherDashboard --> T_Logout
+        T_Logout --> ResetRole
+    end
+
+    subgraph SG_Student ["🎓 學生端自主學習流程"]
+        StudentInput["側邊欄填寫資料：<br/>1. 班級 (801~821)<br/>2. 座號 (01~30)<br/>3. 輸入姓名<br/>4. 選擇學習單元"]:::actionNode
+        StudentPortal["主畫面解鎖：<br/>1. 頂部銀河個人學習儀表板<br/>2. 四大模組經典標籤頁 (st.tabs)"]:::pageNode
+        TabNav{"選擇標籤頁"}:::decisionNode
+
+        SelectRole --> |"🎓 我是學生"| StudentInput
+        StudentInput --> CheckReady
+        CheckReady --> |"是 (條件已滿足)"| StudentPortal
+        StudentPortal --> TabNav
+
+        %% 模組 1
+        TabLearn["【📖 開始學習】<br/>• 生活化白話重點手札<br/>• 生活情境核心案例解析<br/>• 直式樹狀心智圖 (graph LR)"]:::pageNode
+        JumpBtn["點擊按鈕：<br/>🚀 前往【✏️ 小試身手】觀念練習"]:::actionNode
+
+        TabNav --> |"📖 開始學習"| TabLearn
+        TabLearn --> JumpBtn
+        JumpBtn --> |"程式化切換分頁"| TabPractice
+
+        %% 模組 2
+        TabPractice["【✏️ 小試身手】<br/>• 8 題素養情境單選題"]:::pageNode
+        QuizSubmit["學生作答並送出成果"]:::actionNode
+        QuizGrade["系統即時自動批改：<br/>• 計算總分與對錯分析<br/>• 展開觀念充電站補強指南"]:::pageNode
+        SaveLog["自動寫入歷程紀錄<br/>(logger_utils.py)"]:::actionNode
+
+        TabNav --> |"✏️ 小試身手"| TabPractice
+        TabPractice --> QuizSubmit
+        QuizSubmit --> QuizGrade
+        QuizGrade --> SaveLog
+
+        %% 模組 3
+        TabAI["【💬 公民 AI 助教隨身問】<br/>• 獨立思辨對話專區<br/>• 推薦提問引導思考"]:::pageNode
+        SendPrompt["學生提問送出"]:::actionNode
+        GeminiCall["Google GenAI API (gemini-2.5-flash)<br/>角色扮演：國中公民啟發式助教"]:::actionNode
+        AIResponse["動態生成引導式回覆<br/>(引導反思而非直接給答案)"]:::pageNode
+
+        TabNav --> |"💬 公民 AI 助教隨身問"| TabAI
+        TabAI --> SendPrompt
+        SendPrompt --> GeminiCall
+        GeminiCall --> AIResponse
+
+        %% 模組 4
+        TabFootprint["【🌱 我的足跡】<br/>• 個人歷程儀表板<br/>• 單元完成度進度條<br/>• 歷史測驗得分與錯題診斷<br/>• 學習歷程時間軸"]:::pageNode
+
+        TabNav --> |"🌱 我的足跡"| TabFootprint
+    end
+
+    subgraph SG_Data ["💾 系統資料持久層"]
+        DB_Units[("教材庫<br/>(units_db.json)")]:::dataNode
+        DB_Logs[("學生歷程庫<br/>(student_logs/*.json)")]:::dataNode
+        GeminiService["Google GenAI 服務<br/>(Gemini 2.5 Flash)"]:::dataNode
+    end
+
+    %% 資料流跨層關聯
+    T_Manage <--> DB_Units
+    T_Manage -. "呼叫 AI 萃取生成教材" .-> GeminiService
+    T_Analytics <--> DB_Logs
+    SaveLog --> DB_Logs
+    TabFootprint <--> DB_Logs
+    GeminiCall -. "API 請求與串流回應" .-> GeminiService
+```
+
+---
+
+## 🛠️ 七、 今日修改檔案全清單
+
+| 檔案名稱 / 路徑 | 類型 | 今日修訂總結 |
+| :--- | :--- | :--- |
+| [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | • 實作首頁 4 條件啟航防禦與即時動態檢核看板。<br>• 側邊欄頂部間距緊湊化與雙欄資料排版。<br>• 建立全載具自適應流體字級體系（`--fluid-*`）。<br>• 適配 Streamlit 1.59+ React-Aria 頁籤選擇器。<br>• 還原經典膠囊標籤頁導航外觀與純粹字級放大（19px~22px）。 |
+| [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 專案手冊 | • 全面更新為現代化專案說明手冊。<br>• 內嵌完整系統分析（角色、防禦機制、4大模組、技術堆疊）。<br>• 內嵌最新標準化 Mermaid 流程設計圖。 |
+| [`DEVELOPMENT_LOG_20261004.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 本日日誌 | 本日開發完整詳細記錄檔（涵蓋階段 19 至 24 全部內容）。 |
+| [`DEVELOPMENT_LOG.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 主開發日誌 | 全專案主開發歷程檔，同步追加階段 19 ~ 24 之歷程記錄。 |
+
+---
+
+## 🧪 八、 自動化測試與回歸驗證結果
+
+1. **語法編譯檢查**：
+   - 執行 `python -m py_compile app.py` ➔ 0 語法錯誤。
+2. **Streamlit AppTest 全流程模擬**：
+   - 訪客初始進入：驗證 `len(at.tabs) == 0`，未出現學習資料與分頁（通過）。
+   - 學生基本資料未填：驗證 `len(at.tabs) == 0`，維持防禦看板（通過）。
+   - 學生資料輸入完成：姓名輸入「王小明」並選定單元，驗證 `len(at.tabs) == 4`（通過）。
+   - 跨頁程式化跳轉：由「開始學習」一鍵直達「小試身手」，狀態順暢切換（通過）。
+3. **版本控制驗證**：
+   - 所有變更皆透過 `dulwich` 乾淨 Commit，並成功推送至 GitHub `main` 分支。
