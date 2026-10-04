@@ -203,6 +203,21 @@
   * 通過 `AppTest` 完整模擬測試：點擊「🚀 前往【✏️ 小試身手】觀念練習」後成功跳轉至「✏️ 小試身手」，接續作答、提交評分、切換單元等完整生命週期皆無任何異常。
 
 
+### 🔹 階段 19：首頁進入防禦與學習資料條件載入重構 (2026-10-04)
+* **需求背景**：
+  * 原先學生進入網站時，預設身分為學生且直接載入第一課講義與練習題，未要求先登記基本資料與選課，缺少引導感。
+* **技術重構與多條件防禦機制 (`app.py`)**：
+  * **身分初始狀態防護**：將 `user_role` 初始狀態調整為 `"none"`，身分選單新增「請選擇操作身分...」，未選身分時阻斷教材加載。
+  * **單元選擇防護**：單元下拉選單新增「`-- 請選擇學習單元 --`」佔位項，`current_unit_id` 預設為 `None`，不再直接預設第一課。
+  * **嚴格四條件展示門檻**：
+    * `is_student_ready`：必須同時滿足 `user_role == "student"`、姓名非空字串 `bool(student_name.strip())`、以及 `current_unit_id is not None`。
+    * 滿足條件後，右側畫面才動態載入銀河儀表板與 4 大學生學習分頁（開始學習、小試身手、AI助教、我的足跡）。
+  * **視覺化「🚀 啟航指引」檢核看板**：
+    * 未滿足條件時，主畫面呈現高對比即時動態檢核卡片，分別標示 4 步驟完成狀態（身分、班級座號、姓名、單元），輔以星系特色導航。
+  * **教師端登出重置**：教師端支援一鍵登出並安全返回首頁引導狀態。
+* **自動化測試與回歸驗證**：
+  * 透過 Streamlit `AppTest` 完整自動化模擬：包含初始進入 0 Tabs 檢核、身分選擇後無姓名/無單元防禦、輸入姓名與單元後即時展現 4 Tabs、重新選取單元重置、以及教師端驗證切換。
+
 ---
 
 ## 📂 三、 系統檔案結構總覽
@@ -219,6 +234,7 @@
 | [DEVELOPMENT_LOG_20260929.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260929.md) | 文件 | 2026-09-29 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20260930.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260930.md) | 文件 | 2026-09-30 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20261003.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261003.md) | 文件 | 2026-10-03 本日開發紀錄檔 |
+| [DEVELOPMENT_LOG_20261004.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 文件 | 2026-10-04 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程主紀錄檔 |
 
 ---

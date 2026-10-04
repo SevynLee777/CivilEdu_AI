@@ -400,7 +400,7 @@ st.markdown("""
 
 # --- Session State Initialization ---
 if "user_role" not in st.session_state:
-    st.session_state.user_role = "student"  # "student" or "teacher"
+    st.session_state.user_role = "none"  # "none", "student", or "teacher"
 if "is_teacher_authenticated" not in st.session_state:
     st.session_state.is_teacher_authenticated = False
 if "role_radio_key_version" not in st.session_state:
@@ -429,7 +429,7 @@ def switch_to_practice_tab():
 
 def on_auth_dismiss():
     if not st.session_state.get("is_teacher_authenticated", False):
-        st.session_state.user_role = "student"
+        st.session_state.user_role = "none"
         st.session_state.role_radio_key_version += 1
 
 @st.dialog("🔒 教師身分驗證", on_dismiss=on_auth_dismiss)
@@ -503,10 +503,17 @@ if not all_units:
 # --- Sidebar: Role & Student / Navigation ---
 with st.sidebar:
     st.markdown("### 🏛️ 身分切換")
+    role_options = ["請選擇操作身分...", "🎓 我是學生", "👨‍🏫 我是老師"]
+    cur_role_idx = 0
+    if st.session_state.user_role == "student":
+        cur_role_idx = 1
+    elif st.session_state.user_role == "teacher":
+        cur_role_idx = 2
+
     role_choice = st.radio(
         "選擇操作身分",
-        ["🎓 我是學生", "👨‍🏫 我是老師"],
-        index=0 if st.session_state.user_role == "student" else 1,
+        role_options,
+        index=cur_role_idx,
         key=f"role_radio_{st.session_state.role_radio_key_version}",
         label_visibility="collapsed"
     )
@@ -516,9 +523,16 @@ with st.sidebar:
             teacher_auth_dialog()
         else:
             st.session_state.user_role = "teacher"
-    else:
-        if st.session_state.user_role == "teacher":
+    elif "學生" in role_choice:
+        if st.session_state.user_role != "student":
             st.session_state.user_role = "student"
+            st.session_state.is_teacher_authenticated = False
+            st.session_state.practice_submitted = False
+            st.session_state.practice_answers = {}
+            st.rerun()
+    else:
+        if st.session_state.user_role != "none":
+            st.session_state.user_role = "none"
             st.session_state.is_teacher_authenticated = False
             st.session_state.practice_submitted = False
             st.session_state.practice_answers = {}
@@ -545,42 +559,71 @@ with st.sidebar:
         st.markdown("---")
         st.markdown("### 📚 選擇學習單元")
         unit_titles = [u["title"] for u in all_units]
+        unit_options = ["-- 請選擇學習單元 --"] + unit_titles
         
-        # Ensure default unit id is set
-        if st.session_state.current_unit_id is None and all_units:
-            st.session_state.current_unit_id = all_units[0]["id"]
-            
-        cur_unit = unit_manager.get_unit(st.session_state.current_unit_id) or all_units[0]
-        cur_idx = unit_titles.index(cur_unit["title"]) if cur_unit["title"] in unit_titles else 0
+        cur_unit = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
+        cur_idx = unit_options.index(cur_unit["title"]) if (cur_unit and cur_unit["title"] in unit_options) else 0
         
-        selected_title = st.selectbox("選擇學習單元", unit_titles, index=cur_idx, label_visibility="collapsed")
+        selected_title = st.selectbox("選擇學習單元", unit_options, index=cur_idx, label_visibility="collapsed")
         
         # Check if changed
-        for u in all_units:
-            if u["title"] == selected_title and u["id"] != st.session_state.current_unit_id:
-                st.session_state.current_unit_id = u["id"]
+        if selected_title == "-- 請選擇學習單元 --":
+            if st.session_state.current_unit_id is not None:
+                st.session_state.current_unit_id = None
+                st.session_state.practice_submitted = False
+                st.session_state.practice_answers = {}
+                st.session_state.chat_history = []
+                st.session_state.student_tab_selection = "📖 開始學習"
+                st.rerun()
+        else:
+            for u in all_units:
+                if u["title"] == selected_title and u["id"] != st.session_state.current_unit_id:
+                    st.session_state.current_unit_id = u["id"]
+                    st.session_state.practice_submitted = False
+                    st.session_state.practice_answers = {}
+                    st.session_state.chat_history = []
+                    st.session_state.student_tab_selection = "📖 開始學習"
+                    st.rerun()
+
+        # If student has filled in everything, show friendly return button
+        if st.session_state.student_name.strip() and (st.session_state.current_unit_id is not None):
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🔄 重新選定單元 / 返回導引", use_container_width=True):
+                st.session_state.current_unit_id = None
                 st.session_state.practice_submitted = False
                 st.session_state.practice_answers = {}
                 st.session_state.chat_history = []
                 st.session_state.student_tab_selection = "📖 開始學習"
                 st.rerun()
 
-    else:
+    elif st.session_state.user_role == "teacher":
         st.markdown("### 👨‍🏫 教師管理功能")
         st.info("教師只需新增教材與貼上課本內容，AI 自動為您萃取重點、生活案例、題目與補救指引！")
-        if st.button("🔒 登出教師 / 返回學生端", use_container_width=True):
-            st.session_state.user_role = "student"
+        if st.button("🔒 登出教師 / 返回首頁", use_container_width=True):
+            st.session_state.user_role = "none"
             st.session_state.is_teacher_authenticated = False
             st.session_state.role_radio_key_version += 1
             st.session_state.practice_submitted = False
             st.session_state.practice_answers = {}
             st.session_state.student_tab_selection = "📖 開始學習"
             st.rerun()
+    else:
+        st.info("👈 請先於上方選擇您的身分（我是學生 或 我是老師）以開啟功能。")
 
 # ══════════════════════════════════════════════
-# 🎓 學生端 (Student Portal)
+# 🏛️ 主畫面渲染路由 (Main Content Routing)
 # ══════════════════════════════════════════════
-if st.session_state.user_role == "student":
+is_student_ready = (
+    st.session_state.user_role == "student"
+    and bool(st.session_state.student_name.strip())
+    and (st.session_state.current_unit_id is not None)
+)
+is_teacher_ready = (
+    st.session_state.user_role == "teacher"
+    and st.session_state.get("is_teacher_authenticated", False)
+)
+
+if is_student_ready:
     student_info = {
         "class_name": st.session_state.student_class,
         "seat_num": st.session_state.student_seat,
@@ -920,17 +963,7 @@ if st.session_state.user_role == "student":
 # ══════════════════════════════════════════════
 # 👨‍🏫 教師端 (Teacher Portal)
 # ══════════════════════════════════════════════
-else:
-    if not st.session_state.get("is_teacher_authenticated", False):
-        st.error("🔒 **存取受限**：尚未通過教師身分驗證。")
-        st.info("請於左上角身分切換中完成教師密碼確認，或點擊下方按鈕返回學生端。")
-        if st.button("⬅️ 返回學生端"):
-            st.session_state.user_role = "student"
-            st.session_state.role_radio_key_version += 1
-            st.session_state.practice_submitted = False
-            st.session_state.practice_answers = {}
-            st.rerun()
-        st.stop()
+elif is_teacher_ready:
     st.markdown("""
     <div class="galaxy-header">
         <p class="eyebrow">TEACHER OBSERVATORY & CURRICULUM MANAGEMENT</p>
@@ -1138,3 +1171,138 @@ else:
                 mime="text/csv",
                 type="primary"
             )
+
+else:
+    # ══════════════════════════════════════════════
+    # 🌌 歡迎啟航與引導頁面 (Welcome & Setup Guide)
+    # ══════════════════════════════════════════════
+    st.markdown("""
+    <div class="galaxy-header">
+        <p class="eyebrow">NATIONAL JUNIOR HIGH CIVICS AI LEARNING GALAXY</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span class="brand-mark">民</span>
+                <div>
+                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; line-height: 1.2;">國中公民思辨星系 ｜ AI 智慧自主學習館</h1>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
+                </div>
+            </div>
+            <div class="pulse-status">
+                <span class="pulse-dot"></span>
+                <span>航行準備中 ｜ 請先完成左欄資料登記</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 狀態檢查卡片
+    step1_done = st.session_state.user_role in ["student", "teacher"]
+    step1_text = (
+        "✅ 已選定：🎓 我是學生" if st.session_state.user_role == "student"
+        else ("✅ 已選定：👨‍🏫 我是老師" if st.session_state.user_role == "teacher"
+        else "⏳ 請在左欄點選「我是學生」或「我是老師」")
+    )
+    step1_color = "#4ade80" if step1_done else "#f59e0b"
+
+    step2_done = (st.session_state.user_role == "student")
+    step2_text = (
+        f"✅ 已選定：{st.session_state.student_class} 班 {st.session_state.student_seat} 號"
+        if step2_done else "⏳ 待選定學生身分後設定"
+    )
+    step2_color = "#4ade80" if step2_done else "#94a3b8"
+
+    step3_done = bool(st.session_state.student_name.strip()) and (st.session_state.user_role == "student")
+    step3_text = (
+        f"✅ 已輸入姓名：{st.session_state.student_name}"
+        if step3_done else (
+            "⏳ 請在左欄「姓名」欄位輸入您的名字（例如：王小明）"
+            if st.session_state.user_role == "student" else "⏳ 待選定學生身分"
+        )
+    )
+    step3_color = "#4ade80" if step3_done else ("#f87171" if st.session_state.user_role == "student" else "#94a3b8")
+
+    cur_unit_obj = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
+    step4_done = (cur_unit_obj is not None) and (st.session_state.user_role == "student")
+    step4_text = (
+        f"✅ 已選定單元：{cur_unit_obj['title']}"
+        if step4_done else (
+            "⏳ 請在左欄「選擇學習單元」下拉選取欲學習課次"
+            if st.session_state.user_role == "student" else "⏳ 待選定學生身分"
+        )
+    )
+    step4_color = "#4ade80" if step4_done else ("#f87171" if st.session_state.user_role == "student" else "#94a3b8")
+
+    st.markdown(f"""
+    <div style="background: rgba(13, 28, 51, 0.72); border: 1px solid var(--galaxy-line); border-radius: 16px; padding: 1.8rem 2rem; margin-bottom: 1.8rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);">
+        <h3 style="color: #95c6f4; margin: 0 0 0.8rem 0; font-family: var(--font-serif); font-size: 1.35rem;">
+            🚀 啟航指引：請於左側邊欄完成設定以展開學習
+        </h3>
+        <p style="color: #d0e0ee; line-height: 1.75; font-size: 1.05rem; margin-bottom: 1.2rem;">
+            歡迎來到公民自主學習星系！為了為您客製化學習歷程與 AI 助教陪伴，<b>請先在左欄完成身分、班級、姓名與學習單元選定</b>。完成後右欄將即刻為您載入單元重點精華、直式心智圖與素養練習！
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step1_color}; border-radius: 10px; padding: 1rem;">
+                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">1️⃣ 選擇操作身分</div>
+                <div style="font-size: 0.95rem; color: #cbd5e1;">{step1_text}</div>
+            </div>
+            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step2_color}; border-radius: 10px; padding: 1rem;">
+                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">2️⃣ 選擇班級座號</div>
+                <div style="font-size: 0.95rem; color: #cbd5e1;">{step2_text}</div>
+            </div>
+            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step3_color}; border-radius: 10px; padding: 1rem;">
+                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">3️⃣ 輸入學生姓名</div>
+                <div style="font-size: 0.95rem; color: #cbd5e1;">{step3_text}</div>
+            </div>
+            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step4_color}; border-radius: 10px; padding: 1rem;">
+                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">4️⃣ 選定學習單元</div>
+                <div style="font-size: 0.95rem; color: #cbd5e1;">{step4_text}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.user_role == "teacher" and not st.session_state.is_teacher_authenticated:
+        st.warning("🔒 **教師身分確認**：進入教師管理端需要驗證教師專屬密碼。")
+        if st.button("🔑 開啟教師密碼驗證視窗", type="primary"):
+            teacher_auth_dialog()
+
+    # 專案四大特色導覽卡片
+    st.markdown("#### 🌟 星系特色功能導覽")
+    col_feat1, col_feat2 = st.columns(2)
+    with col_feat1:
+        st.markdown("""
+        <div class="feature-card">
+            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">📖 輕鬆看懂白話導讀 ＆ 直式樹狀心智圖</h4>
+            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
+                將生硬的法律與政體條文轉化為生活白話與校園案例，搭配由左至右、特大字體的直式心智圖，在手機、平板與桌機皆能免橫滑順暢瀏覽。
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="feature-card">
+            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">✏️ 8 道素養情境小試身手 ＆ 觀念充電站</h4>
+            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
+                不考死背記憶，以真實生活情境為核心題目。若有錯題，AI 老師即時提供「白話秒懂、生活比喻、避坑口訣」三效合一的充電解析！
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_feat2:
+        st.markdown("""
+        <div class="feature-card">
+            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">💬 公民 AI 助教隨身問</h4>
+            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
+                隨選即問！學習中有任何疑問，不管是「為什麼主權對外要獨立？」或是生活時事，AI 助教隨時以淺顯易懂的校園實例為您解惑。
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="feature-card">
+            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">🌱 自主成長學習足跡（零排名無壓力）</h4>
+            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
+                清晰記錄自己點亮的單元星宿與掌握狀態，系統絕不展示班級排名，保護每位同學依照自己的步調踏實進步。
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
