@@ -1,45 +1,199 @@
-# 🏛️ CivilEdu_AI (國中公民 AI 智慧自主學習館 / 公民思辨星系)
+# 🌌 公民思辨星系 ｜ 國中八年級公民自主學習平台 (CivilEdu_AI)
 
-這是一個專為國中公民課程設計的 AI 智慧自主學習系統。
-**目標**：讓學生自主閱讀核心重點與生活案例、透過情境小試身手獲得即時解析、由隨身 AI 助教陪伴成長。
-
-## 📱 專案願景 (Vision)
-根據您的課程大綱 (社會學導論、社會不平等、社會制度...)，系統將提供：
-1.  **單元練習模式**：學生選擇週次 (e.g., Week 5 社會化)，AI 生成 5-10 題相關選擇/簡答題。
-2.  **模擬考模式**：期中/期末範圍的綜合測驗。
-3.  **AI 即時批改**：針對簡答題給予評分與建議 (而不只是對錯)。
-
-## 🏗️ 建議開發架構 (Architecture Strategy)
-
-為了達到「手機可用」且「快速開發」的平衡，我們建議採用以下技術堆疊：
-
-### 1. 核心 AI 引擎 (Brain)
-*   **LLM 模型**：Gemini 1.5 Pro/Flash (長文本處理能力強，適合讀講義)。
-*   **RAG (檢索增強生成)**：
-    *   **痛點**：AI 可能不知道您課堂上教的「特定定義」。
-    *   **解法**：建立一個「知識庫」。我們需要將您每週的 **PDF/PPT 講義** 轉換成文字資料庫。
-    *   **流程**：學生選「Week 5」 -> 系統撈出 Week 5 講義 -> AI 根據講義出題。
-
-### 2. 使用者介面 (UI) - 推薦 **Streamlit**
-*   **為什麼選 Streamlit?**
-    *   **Mobile Friendly**：原生支援響應式設計，手機瀏覽器打開就像 App。
-    *   **開發極快**：純 Python 即可完成前端互動 (比 React 節省 80% 時間)。
-    *   **適合測驗**：內建 `st.form` (表單) 和 `st.session_state` (計分狀態)，非常適合做題庫系統。
-
-### 3. 資料結構 (Data)
-我們需要根據您的圖片建立課程結構索引：
-
-| 週次 | 主題 | 關鍵字/範圍 |
-| :--- | :--- | :--- |
-| W1-2 | 社會學導論/理論 | 結構功能論, 衝突論... |
-| W5-6 | 社會化/偏差/運動 | 標籤理論, 社會控制... |
-| ... | ... | ... |
-
-## 🚀 開發路徑 (Roadmap)
-1.  **環境建置**：安裝 Streamlit, Google GenAI SDK, PyPDF2 (讀講義用)。
-2.  **知識庫建立**：撰寫腳本，將您的講義 PDF 解析並標記週次。
-3.  **Web App 原型**：製作手機版介面 (選週次 -> 出題 -> 答題 -> 評分)。
-4.  **Prompt 優化**：調整 AI 的「老師人設」，讓解說更像課堂風格。
+本專案是專為**國中八年級公民科**打造的沉浸式 AI 智慧自主學習系統。平台融合**新世代生成式 AI（Google GenAI 2.5 Flash）**、**八年級素養教材庫**、**生活化情境案例**與**個人化自主學習歷程日誌**，兼顧學生自主探索與教師後台督導。
 
 ---
-**Next Step**: 請將該課程相關的電子檔 (PDF/PPT) 放入 `materials` 資料夾中，我們就能開始讓 AI 讀書了！
+
+## 🧭 系統分析與核心架構
+
+### 1. 核心角色與權限架構
+- **未就緒 / 訪客**：初次訪問網站時，主畫面啟動「航行準備中」防禦機制，提供動態即時檢核看板與星系特色導覽，防止未登記直接作答。
+- **學生端 (Student)**：完成身分、班級、座號、姓名登記並選定學習單元後，解鎖頂部銀河個人學習儀表板與四大核心模組：
+  1. **📖 開始學習**：白話生活化手札重點、生活實例、直式樹狀心智圖（Mermaid `graph LR`）、一鍵直達練習按鈕。
+  2. **✏️ 小試身手**：8 題生活情境素養題、即時批改評分、觀念充電站補強指南。
+  3. **💬 公民 AI 助教隨身問**：蘇格拉底式引導問答、推薦思辨啟發題。
+  4. **🌱 我的足跡**：自主學習歷程統計、答題完成度與錯題診斷分析。
+- **教師端 (Teacher)**：需通過專屬密碼驗證視窗（Modal Dialog），進入教師管理後台：
+  - 教材單元管理（AI 自動生成 8 題素養題目、情境案例與心智圖、手動編修與刪除）。
+  - 全班學習歷程看板（各班作答率、平均分、錯題排行、學生個人足跡追蹤）。
+  - 報表匯出（下載 CSV / JSON 學習歷程數據）。
+
+### 2. 四條件啟航防禦機制（Gatekeeper Mechanism）
+為確保自主學習歷程之真實性與完整歸檔，系統設有動態載入防禦門檻：
+$$\text{Ready 門檻} = (\text{身分} == \text{學生}) \land (\text{姓名非空}) \land (\text{學習單元已選定})$$
+- **未就緒**：即時展示 4 步驟動態檢核看板（已完成步驟顯示 ✅，未完成顯示 ⏳）與四大特色卡片。
+- **滿足條件**：即刻動態渲染個人學習看板與四大標籤頁。
+
+---
+
+## 📊 網站完整流程設計圖 (Website Process Flowchart)
+
+以下流程圖完整呈現身分選擇、密碼安全驗證、動態防禦機制、四大模組學習及數據落盤流程：
+
+```mermaid
+flowchart TD
+    %% 樣式設定
+    classDef startNode fill:#1E3A8A,stroke:#60A5FA,stroke-width:2px,color:#FFFFFF;
+    classDef decisionNode fill:#312E81,stroke:#F59E0B,stroke-width:2px,color:#FFFFFF;
+    classDef pageNode fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF;
+    classDef actionNode fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#FFFFFF;
+    classDef guardNode fill:#451A03,stroke:#F97316,stroke-width:2px,color:#FFFFFF;
+    classDef dataNode fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#FFFFFF;
+
+    subgraph SG_Entry ["🌐 進入系統與身分選擇"]
+        Start(["使用者連線至網站 (app.py)"]):::startNode
+        InitSession["初始化 Session 狀態<br/>(身分=none, 單元=None)"]:::actionNode
+        SelectRole{"左側邊欄選擇身分"}:::decisionNode
+
+        Start --> InitSession
+        InitSession --> SelectRole
+    end
+
+    subgraph SG_Guard ["🚀 首頁啟航防禦機制"]
+        ShowDefense["主畫面：航行準備中<br/>• 4步驟即時狀態檢核表<br/>• 四大模組特色導覽卡片"]:::guardNode
+        CheckReady{"檢查啟航防禦條件：<br/>姓名非空 且 已選單元？"}:::decisionNode
+        ResetRole["重置身分至未選擇 (none)"]:::actionNode
+
+        SelectRole --> |"未選擇 (none)"| ShowDefense
+        ResetRole --> ShowDefense
+        CheckReady --> |"否 (條件未滿足)"| ShowDefense
+    end
+
+    subgraph SG_Teacher ["👨‍🏫 教師管理後台流程"]
+        CheckTeacherAuth{"是否已驗證密碼？"}:::decisionNode
+        TeacherDialog["彈出密碼驗證視窗<br/>(teacher_auth_dialog)"]:::actionNode
+        CheckPwd{"驗證密碼"}:::decisionNode
+        TeacherVerified["驗證成功<br/>(is_teacher_authenticated=True)"]:::actionNode
+        TeacherDashboard["主畫面：👨‍🏫 教師管理儀表板"]:::pageNode
+        T_Manage["單元管理<br/>(新增/編輯/刪除/AI生成)"]:::actionNode
+        T_Analytics["學生歷程看板<br/>(全班統計/作答率/個別足跡)"]:::actionNode
+        T_Export["報表匯出<br/>(下載 CSV / JSON 報表)"]:::actionNode
+        T_Logout["登出管理端"]:::actionNode
+
+        SelectRole --> |"👨‍🏫 我是老師"| CheckTeacherAuth
+        CheckTeacherAuth --> |"未驗證"| TeacherDialog
+        TeacherDialog --> CheckPwd
+        CheckPwd --> |"密碼正確"| TeacherVerified
+        CheckPwd --> |"取消或關閉"| ResetRole
+        CheckTeacherAuth --> |"已驗證"| TeacherVerified
+        TeacherVerified --> TeacherDashboard
+
+        TeacherDashboard --> T_Manage
+        TeacherDashboard --> T_Analytics
+        TeacherDashboard --> T_Export
+        TeacherDashboard --> T_Logout
+        T_Logout --> ResetRole
+    end
+
+    subgraph SG_Student ["🎓 學生端自主學習流程"]
+        StudentInput["側邊欄填寫資料：<br/>1. 班級 (801~821)<br/>2. 座號 (01~30)<br/>3. 輸入姓名<br/>4. 選擇學習單元"]:::actionNode
+        StudentPortal["主畫面解鎖：<br/>1. 頂部銀河個人學習儀表板<br/>2. 四大模組經典標籤頁 (st.tabs)"]:::pageNode
+        TabNav{"選擇標籤頁"}:::decisionNode
+
+        SelectRole --> |"🎓 我是學生"| StudentInput
+        StudentInput --> CheckReady
+        CheckReady --> |"是 (條件已滿足)"| StudentPortal
+        StudentPortal --> TabNav
+
+        %% 模組 1
+        TabLearn["【📖 開始學習】<br/>• 生活化白話重點手札<br/>• 生活情境核心案例解析<br/>• 直式樹狀心智圖 (graph LR)"]:::pageNode
+        JumpBtn["點擊按鈕：<br/>🚀 前往【✏️ 小試身手】觀念練習"]:::actionNode
+
+        TabNav --> |"📖 開始學習"| TabLearn
+        TabLearn --> JumpBtn
+        JumpBtn --> |"程式化切換分頁"| TabPractice
+
+        %% 模組 2
+        TabPractice["【✏️ 小試身手】<br/>• 8 題素養情境單選題"]:::pageNode
+        QuizSubmit["學生作答並送出成果"]:::actionNode
+        QuizGrade["系統即時自動批改：<br/>• 計算總分與對錯分析<br/>• 展開觀念充電站補強指南"]:::pageNode
+        SaveLog["自動寫入歷程紀錄<br/>(logger_utils.py)"]:::actionNode
+
+        TabNav --> |"✏️ 小試身手"| TabPractice
+        TabPractice --> QuizSubmit
+        QuizSubmit --> QuizGrade
+        QuizGrade --> SaveLog
+
+        %% 模組 3
+        TabAI["【💬 公民 AI 助教隨身問】<br/>• 獨立思辨對話專區<br/>• 推薦提問引導思考"]:::pageNode
+        SendPrompt["學生提問送出"]:::actionNode
+        GeminiCall["Google GenAI API (gemini-2.5-flash)<br/>角色扮演：國中公民啟發式助教"]:::actionNode
+        AIResponse["動態生成引導式回覆<br/>(引導反思而非直接給答案)"]:::pageNode
+
+        TabNav --> |"💬 公民 AI 助教隨身問"| TabAI
+        TabAI --> SendPrompt
+        SendPrompt --> GeminiCall
+        GeminiCall --> AIResponse
+
+        %% 模組 4
+        TabFootprint["【🌱 我的足跡】<br/>• 個人歷程儀表板<br/>• 單元完成度進度條<br/>• 歷史測驗得分與錯題診斷<br/>• 學習歷程時間軸"]:::pageNode
+
+        TabNav --> |"🌱 我的足跡"| TabFootprint
+    end
+
+    subgraph SG_Data ["💾 系統資料持久層"]
+        DB_Units[("教材庫<br/>(units_db.json)")]:::dataNode
+        DB_Logs[("學生歷程庫<br/>(student_logs/*.json)")]:::dataNode
+        GeminiService["Google GenAI 服務<br/>(Gemini 2.5 Flash)"]:::dataNode
+    end
+
+    %% 資料流跨層關聯
+    T_Manage <--> DB_Units
+    T_Manage -. "呼叫 AI 萃取生成教材" .-> GeminiService
+    T_Analytics <--> DB_Logs
+    SaveLog --> DB_Logs
+    TabFootprint <--> DB_Logs
+    GeminiCall -. "API 請求與串流回應" .-> GeminiService
+```
+
+---
+
+## 🛠️ 技術堆疊 (Tech Stack)
+
+| 領域 | 技術 / 套件 | 說明 |
+| :--- | :--- | :--- |
+| **前端應用** | `streamlit` (>= 1.59.1) | 響應式 Web 框架，支援 `@react-aria/tabs` 標籤頁與 Session State 狀態機 |
+| **樣式排版** | CSS3 (`clamp()` 流體字級) | 全載具響應式適配，保證手機、平板與桌面皆有舒適易讀的字型排版 |
+| **AI 引擎** | `google-genai` (>= 2.28.0) | Google 官方新版 SDK，調用 `gemini-2.5-flash` 進行結構化教材生成與引導式問答 |
+| **可視化圖表** | Mermaid (`graph LR`) | 呈現直式樹狀生活化公民思辨心智圖 |
+| **歷程分析** | `pandas` | 學生個人足跡日誌處理、全班作答摘要統計與 CSV 匯出 |
+| **資料持久化** | 本地 JSON 儲存庫 | `units_db.json`（教材庫）、`student_logs/*.json`（學習足跡） |
+
+---
+
+## 📂 專案檔案結構
+
+```text
+CivilEdu_AI/
+├── app.py                      # 主應用程式（公民思辨星系 Streamlit 介面）
+├── unit_manager.py             # 學習單元管理與 Google GenAI 生成引擎
+├── logger_utils.py             # 學生歷程紀錄、統計與報表匯出模組
+├── units_db.json               # 系統學習單元資料庫（含重點、案例、8題練習、心智圖）
+├── config.json                 # 系統配置（科目名稱、AI 人設提示詞）
+├── student_logs/               # 學生個人學習歷程 JSON 日誌目錄
+├── requirements.txt            # Python 依賴清單
+├── run.bat                     # Windows 快速啟動批次檔
+├── README.md                   # 系統分析、架構說明與完整流程圖
+└── DEVELOPMENT_LOG*.md         # 專案詳細開發與迭代歷程紀錄
+```
+
+---
+
+## 🚀 快速啟動指引
+
+### 1. 安裝環境依賴
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 設定 Google Gemini API Key
+可於系統環境變數或 `.streamlit/secrets.toml` 設定：
+```bash
+export GEMINI_API_KEY="您的_GEMINI_API_KEY"
+```
+
+### 3. 啟動應用程式
+```bash
+streamlit run app.py
+```
+或直接在 Windows 雙擊執行 `run.bat`。

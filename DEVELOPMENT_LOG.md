@@ -232,6 +232,10 @@
   * **回復經典頁籤外觀**：移除過度卡片化的厚外框與浮動方塊感，還原經典膠囊標籤頁（`border-radius: 999px`）、共有水平基線（`border-bottom: 1.5px solid var(--galaxy-line)`）與選中時的琥珀金底線指標（`border-bottom: 3px solid var(--galaxy-amber)`），保持標籤列整體連貫性。
   * **純粹字級加大**：標籤字級設定為 `clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem)`（約 19px ～ 22px），字重為 600（未選）/ 700（選中），精準覆蓋 Streamlit 1.59+ `@react-aria/tabs` 之 `[data-testid="stTab"]` 與 `.react-aria-Tab`，清晰易讀且不過度膨脹。
   * **還原導覽卡片與章節標題**：首頁特色功能導覽卡片還原原版標題與簡潔排版（`📖 白話重點 ＆ 直式心智圖` 等），內頁章節標題還原為 `###`，風格清爽聚焦。
+* **階段 24：系統全面分析、完整網站流程圖（Mermaid Chart）與 README.md 全新重構（2026-10-04）**：
+  * **架構與業務流程全面梳理**：詳細分析未就緒、學生端、教師端 3 大權限邊界，以及 4 條件啟航防禦與四大核心學習分頁。
+  * **Mermaid 流程設計圖標準化**：產出 100% 相容 Mermaid Chart 與 GitHub Markdown 之流程圖（涵蓋 Entry, Guard, Teacher, Student, DataStorage 五大模組）。
+  * **專案手冊重構**：更新 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md)，包含最新系統架構、Mermaid 流程圖、技術堆疊與啟動指引。
 
 ---
 

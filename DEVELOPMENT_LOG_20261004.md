@@ -167,5 +167,25 @@
    - 首頁導覽卡片還原原版標題與簡潔排版（`📖 白話重點 ＆ 直式心智圖`、`✏️ 8 題素養情境小試身手` 等）。
    - 內頁章節標題還原為 `###`，風格清爽聚焦。
 
+---
+
+## 📊 八、 系統全面分析、完整網站流程圖（Mermaid Chart）與 README.md 全新重構 (Phase 24)
+
+### 1. 調整背景：
+- 配合系統功能全面升級（身分切換、教師安全驗證、4 條件啟航防禦、4 大自主學習分頁、AI 助教隨身問），進行系統架構與業務流程全面分析梳理。
+- 繪製高相容性 Mermaid 流程設計圖，並同步重構 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) 為現代化專案展示手冊。
+
+### 2. 重點成果：
+1. **完整系統分析報告產出**：
+   - 梳理 3 大角色狀態（未就緒訪客、學生端、教師端）與權限邊界。
+   - 詳述四條件動態防禦機制（`Ready 門檻`）之狀態機運作原理。
+   - 模組化分析四大核心學習頁籤與資料持久層（`units_db.json`、`student_logs/`）。
+2. **Mermaid 流程設計圖標準化**：
+   - 繪製涵蓋全生命週期的 `flowchart TD`，使用 5 大標準子圖（Entry, Guard, Teacher, Student, DataStorage）。
+   - 節點文字雙引號化、換行 `<br/>` 標準化，100% 相容 Mermaid Chart、Mermaid Live Editor、GitHub Markdown。
+3. **專案手冊 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) 全面現代化**：
+   - 淘汰舊版初始草稿，替換為最新八年級公民思辨星系架構、系統分析、流程圖與技術堆疊說明。
+
+
 
 
