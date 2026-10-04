@@ -29,21 +29,32 @@ st.markdown("""
         --galaxy-ink: #0a1526;
         --galaxy-ink-card: #0d1c33;
         --galaxy-paper: #d0e0ee;
-        --galaxy-paper-muted: #8ba5be;
+        --galaxy-paper-muted: #9bb7d4;
         --galaxy-gold: #5b9ed7;
-        --galaxy-gold-pale: #95c6f4;
+        --galaxy-gold-pale: #b2d7fc;
         --galaxy-amber: #f4d38b;
-        --galaxy-line: rgba(150, 192, 230, 0.18);
+        --galaxy-line: rgba(150, 192, 230, 0.22);
         --font-serif: 'Noto Serif TC', serif;
         --font-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+        /* 全載具自適應流體字級變數：依螢幕尺寸自動縮放，設定保底清晰字級，避免字體過小 */
+        --fluid-base: clamp(15.5px, 0.4vw + 14.5px, 17.5px);
+        --fluid-h1: clamp(1.75rem, 1.8vw + 1.25rem, 2.35rem);
+        --fluid-h2: clamp(1.45rem, 1.3vw + 1.1rem, 1.95rem);
+        --fluid-h3: clamp(1.22rem, 0.9vw + 0.95rem, 1.55rem);
+        --fluid-h4: clamp(1.1rem, 0.6vw + 0.95rem, 1.35rem);
+        --fluid-body: clamp(1.02rem, 0.35vw + 0.96rem, 1.16rem);
+        --fluid-sub: clamp(0.95rem, 0.25vw + 0.9rem, 1.05rem);
     }
     
-    html, body, [class*="css"] {
+    html, body {
+        font-size: var(--fluid-base) !important;
         font-family: var(--font-sans);
     }
     
     /* 墨染深邃背景 + 水墨柔光光暈 */
     .stApp {
+        font-size: 1rem !important;
         background-color: var(--galaxy-bg) !important;
         background-image: 
             radial-gradient(circle at 68% -12%, #274a73 0, transparent 38rem),
@@ -52,22 +63,97 @@ st.markdown("""
         color: var(--galaxy-paper) !important;
     }
     
-    .stMarkdown p, .stMarkdown span, .stMarkdown strong, .stMarkdown li {
+    .stMarkdown p, .stMarkdown span, .stMarkdown strong, .stMarkdown li, .stMarkdown div {
         color: var(--galaxy-paper) !important;
+        font-size: var(--fluid-body) !important;
+        line-height: 1.8 !important;
+    }
+
+    /* 全域文字、選項、按鈕與輸入框流體字級統一防護 */
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span,
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stCheckbox"] label span {
+        font-size: var(--fluid-body) !important;
+        color: #e2e8f0 !important;
+        line-height: 1.6 !important;
+    }
+
+    input, textarea, .stTextInput input, .stTextArea textarea {
+        font-size: var(--fluid-body) !important;
+        color: #ffffff !important;
+    }
+
+    label p, label span, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] span {
+        font-size: var(--fluid-sub) !important;
+        font-weight: 600 !important;
+        color: #cbd5e1 !important;
+    }
+
+    [data-testid="stCaptionContainer"] p, .stCaption {
+        font-size: var(--fluid-sub) !important;
+        color: var(--galaxy-paper-muted) !important;
+        line-height: 1.6 !important;
+    }
+
+    div[data-baseweb="select"] div, div[data-testid="stSelectbox"] div {
+        font-size: var(--fluid-body) !important;
+        color: #ffffff !important;
+    }
+
+    button[data-testid="baseButton-secondary"],
+    button[data-testid="baseButton-primary"],
+    .stButton button {
+        font-size: var(--fluid-body) !important;
+        font-weight: 600 !important;
+    }
+
+    div[data-testid="stAlert"] div, div[data-testid="stAlert"] p {
+        font-size: var(--fluid-body) !important;
+        line-height: 1.65 !important;
+    }
+
+    [data-testid="stExpander"] summary span,
+    [data-testid="stExpander"] summary p {
+        font-size: var(--fluid-body) !important;
+        font-weight: 600 !important;
     }
     
-    h1, h2, h3, .app-title {
+    h1, .app-title {
         font-family: var(--font-serif) !important;
         color: #ffffff !important;
+        font-size: var(--fluid-h1) !important;
+        line-height: 1.3 !important;
         letter-spacing: -0.015em;
     }
 
-    /* 眉標（Eyebrow） */
+    h2 {
+        font-family: var(--font-serif) !important;
+        color: #ffffff !important;
+        font-size: var(--fluid-h2) !important;
+        line-height: 1.35 !important;
+    }
+
+    h3 {
+        font-family: var(--font-serif) !important;
+        color: #95c6f4 !important;
+        font-size: var(--fluid-h3) !important;
+        line-height: 1.4 !important;
+    }
+
+    h4 {
+        font-family: var(--font-serif) !important;
+        color: #95c6f4 !important;
+        font-size: var(--fluid-h4) !important;
+        line-height: 1.4 !important;
+    }
+
+    /* 眉標（Eyebrow）與狀態膠囊：提升可讀性與對比度 */
     .eyebrow {
-        font-size: 0.76rem;
-        font-weight: 700;
-        color: var(--galaxy-gold-pale);
-        letter-spacing: 0.26em;
+        font-size: var(--fluid-sub) !important;
+        font-weight: 700 !important;
+        color: var(--galaxy-gold-pale) !important;
+        letter-spacing: 0.16em !important;
         text-transform: uppercase;
         margin: 0 0 0.4rem 0;
     }
@@ -107,14 +193,15 @@ st.markdown("""
     .pulse-status {
         display: inline-flex;
         align-items: center;
-        gap: 0.55rem;
-        background: rgba(208, 224, 238, 0.04);
-        border: 1px solid rgba(208, 224, 238, 0.16);
+        gap: 0.6rem;
+        background: rgba(208, 224, 238, 0.08);
+        border: 1px solid rgba(208, 224, 238, 0.25);
         border-radius: 999px;
-        padding: 0.38rem 0.95rem;
-        font-size: 0.82rem;
+        padding: 0.48rem 1.15rem;
+        font-size: var(--fluid-sub) !important;
         color: var(--galaxy-paper);
-        letter-spacing: 0.08em;
+        font-weight: 500;
+        letter-spacing: 0.05em;
     }
 
     .pulse-dot {
@@ -221,7 +308,7 @@ st.markdown("""
     }
 
     .observatory-strip span {
-        font-size: 0.82rem;
+        font-size: var(--fluid-sub) !important;
         color: var(--galaxy-paper-muted);
         letter-spacing: 0.1em;
     }
@@ -408,29 +495,39 @@ st.markdown("""
         padding-bottom: 4rem !important;
     }
     [data-testid="stSidebar"] h3 {
-        font-size: 1.05rem !important;
-        margin-top: 0.35rem !important;
-        margin-bottom: 0.25rem !important;
+        font-size: var(--fluid-h4) !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.3rem !important;
         padding: 0 !important;
+        color: #95c6f4 !important;
+        font-weight: 700 !important;
     }
     [data-testid="stSidebar"] hr {
-        margin: 0.5rem 0 !important;
+        margin: 0.65rem 0 !important;
         border-color: rgba(150, 192, 230, 0.2) !important;
     }
     [data-testid="stSidebar"] .stRadio > div {
-        gap: 0.2rem !important;
+        gap: 0.25rem !important;
     }
-    [data-testid="stSidebar"] .stRadio label {
-        padding-top: 2px !important;
-        padding-bottom: 2px !important;
+    [data-testid="stSidebar"] .stRadio label p,
+    [data-testid="stSidebar"] .stRadio label span {
+        font-size: var(--fluid-body) !important;
+        color: #e2e8f0 !important;
+        line-height: 1.5 !important;
+        padding-top: 1px !important;
+        padding-bottom: 1px !important;
     }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"],
-    [data-testid="stSidebar"] [data-testid="stTextInput"] {
-        margin-bottom: 0.2rem !important;
+    [data-testid="stSidebar"] label p,
+    [data-testid="stSidebar"] label span {
+        font-size: var(--fluid-sub) !important;
+        font-weight: 600 !important;
+        color: #cbd5e1 !important;
+        margin-bottom: 0.15rem !important;
     }
-    [data-testid="stSidebar"] label {
-        font-size: 0.88rem !important;
-        margin-bottom: 0.2rem !important;
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] .stSelectbox div {
+        font-size: var(--fluid-body) !important;
+        color: #ffffff !important;
     }
 
     /* BaseWeb 下拉選單浮動層 (Popover / Menu) 視覺與高度優化 */
@@ -438,13 +535,58 @@ st.markdown("""
         z-index: 999999 !important;
     }
     ul[data-testid="stSelectboxVirtualDropdown"] {
-        max-height: 240px !important;
+        max-height: 280px !important;
     }
-    ul[data-testid="stSelectboxVirtualDropdown"] li {
-        padding-top: 7px !important;
-        padding-bottom: 7px !important;
-        min-height: 36px !important;
-        font-size: 0.95rem !important;
+    ul[data-testid="stSelectboxVirtualDropdown"] li,
+    ul[data-testid="stSelectboxVirtualDropdown"] li span {
+        padding-top: 9px !important;
+        padding-bottom: 9px !important;
+        min-height: 42px !important;
+        font-size: var(--fluid-body) !important;
+        color: #ffffff !important;
+    }
+
+    /* 載具自適應響應式斷點 (Responsive Media Queries) */
+    @media (max-width: 640px) {
+        :root {
+            font-size: 15.5px !important;
+        }
+        .galaxy-header {
+            padding: 1.2rem 1.4rem !important;
+        }
+        .numbered-card {
+            padding: 1rem 1.2rem 1rem 3.6rem !important;
+        }
+        .card-idx {
+            font-size: 1.35rem !important;
+            width: 2.6rem !important;
+        }
+        .brand-mark {
+            width: 2.3rem !important;
+            height: 2.3rem !important;
+            font-size: 1.2rem !important;
+        }
+    }
+
+    @media (min-width: 641px) and (max-width: 1024px) {
+        :root {
+            font-size: 16.5px !important;
+        }
+        .galaxy-header {
+            padding: 1.4rem 1.8rem !important;
+        }
+    }
+
+    @media (min-width: 1025px) and (max-width: 1440px) {
+        :root {
+            font-size: 17px !important;
+        }
+    }
+
+    @media (min-width: 1441px) {
+        :root {
+            font-size: 17.5px !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -596,13 +738,12 @@ with st.sidebar:
         class_options = [str(i) for i in range(801, 822)]
         seat_options = [f"{i:02d}" for i in range(1, 31)]
 
-        col_c, col_s, col_n = st.columns([1, 1, 1.4])
+        col_c, col_s = st.columns(2)
         with col_c:
             selected_class = st.selectbox("班級", class_options, index=class_options.index(st.session_state.student_class) if st.session_state.student_class in class_options else 0)
         with col_s:
             selected_seat = st.selectbox("座號", seat_options, index=seat_options.index(st.session_state.student_seat) if st.session_state.student_seat in seat_options else 0)
-        with col_n:
-            entered_name = st.text_input("姓名", value=st.session_state.student_name, placeholder="王小明")
+        entered_name = st.text_input("姓名", value=st.session_state.student_name, placeholder="請輸入姓名，例如：王小明")
         
         st.session_state.student_class = selected_class
         st.session_state.student_seat = selected_seat
@@ -692,8 +833,8 @@ if is_student_ready:
             <div style="display: flex; align-items: center;">
                 <span class="brand-mark">民</span>
                 <div>
-                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; line-height: 1.2;">國中公民思辨星系</h1>
-                    <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
+                    <h1 style="margin: 0; font-size: var(--fluid-h1); font-weight: 700; line-height: 1.2;">國中公民思辨星系</h1>
+                    <p style="margin: 0.2rem 0 0 0; font-size: var(--fluid-sub); color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
                 </div>
             </div>
             <div class="pulse-status">
@@ -702,7 +843,7 @@ if is_student_ready:
             </div>
         </div>
         <div style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
-            <span style="background: rgba(44, 90, 146, 0.35); border: 1px solid rgba(149, 198, 244, 0.35); color: #d0e0ee; padding: 4px 14px; border-radius: 999px; font-size: 0.88rem; font-weight: 600;">
+            <span style="background: rgba(44, 90, 146, 0.35); border: 1px solid rgba(149, 198, 244, 0.35); color: #d0e0ee; padding: 4px 14px; border-radius: 999px; font-size: var(--fluid-sub); font-weight: 600;">
                 📖 當前巡航單元：{current_unit['title']}
             </span>
         </div>
@@ -766,10 +907,10 @@ if is_student_ready:
             for c in life_cases:
                 st.markdown(f"""
                 <div class="case-card">
-                    <p class="eyebrow" style="font-size: 0.72rem; margin-bottom: 0.3rem;">CASE STUDY</p>
-                    <h4 style="color: #95c6f4; margin: 0 0 0.6rem 0; font-family: var(--font-serif); font-size: 1.2rem;">{c.get('title','情境實例')}</h4>
-                    <p style="font-size: 1.05rem; line-height: 1.75; color: #d0e0ee;">{c.get('story','')}</p>
-                    <div style="background: rgba(10, 21, 38, 0.85); padding: 0.9rem 1.2rem; border-radius: 10px; font-weight: 700; color: #f4d38b; border-left: 4px solid #f4d38b; margin-top: 0.8rem; font-size: 0.98rem;">
+                    <p class="eyebrow" style="margin-bottom: 0.3rem;">CASE STUDY</p>
+                    <h4 style="color: #95c6f4; margin: 0 0 0.6rem 0; font-family: var(--font-serif); font-size: var(--fluid-h4);">{c.get('title','情境實例')}</h4>
+                    <p style="font-size: var(--fluid-body); line-height: 1.75; color: #d0e0ee;">{c.get('story','')}</p>
+                    <div style="background: rgba(10, 21, 38, 0.85); padding: 0.9rem 1.2rem; border-radius: 10px; font-weight: 700; color: #f4d38b; border-left: 4px solid #f4d38b; margin-top: 0.8rem; font-size: var(--fluid-body);">
                         💡 思辨焦點：{c.get('takeaway','')}
                     </div>
                 </div>
@@ -1008,7 +1149,7 @@ if is_student_ready:
                         <span class="{badge_class}">{status_str}</span>
                     </div>
                     <p style="margin: 0.3rem 0; color: #cbd5e1;"><b>🔄 探索次數：</b>{fp.get('practice_count',1)} 次 ｜ <b>重點概念：</b>{weak_text}</p>
-                    <p style="margin: 0.3rem 0; font-size: 0.88rem; color: #8ba5be;">最後巡航時間：{fp.get('last_updated','')}</p>
+                    <p style="margin: 0.3rem 0; font-size: var(--fluid-sub); color: #8ba5be;">最後巡航時間：{fp.get('last_updated','')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1022,8 +1163,8 @@ elif is_teacher_ready:
         <div style="display: flex; align-items: center; gap: 0.9rem;">
             <span class="brand-mark">師</span>
             <div>
-                <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700;">教師星系觀測中心</h1>
-                <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">教材單元智能萃取 · 全班學習航跡總覽 · AI 適性化支援</p>
+                <h1 style="margin: 0; font-size: var(--fluid-h1); font-weight: 700;">教師星系觀測中心</h1>
+                <p style="margin: 0.2rem 0 0 0; font-size: var(--fluid-sub); color: #8ba5be; letter-spacing: 0.05em;">教材單元智能萃取 · 全班學習航跡總覽 · AI 適性化支援</p>
             </div>
         </div>
     </div>
@@ -1080,7 +1221,7 @@ elif is_teacher_ready:
                     <div class="feature-card">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h4 style="margin: 0; color: #38bdf8;">📖 {u_title}</h4>
-                            <span style="font-size: 0.9rem; color: #94a3b8;">更新時間：{u.get('updated_at', u.get('created_at',''))}</span>
+                            <span style="font-size: var(--fluid-sub); color: #94a3b8;">更新時間：{u.get('updated_at', u.get('created_at',''))}</span>
                         </div>
                         <p style="margin-top: 0.5rem; color: #cbd5e1;">
                             <b>📌 萃取重點：</b>{len(u_kps)} 條 ｜ <b>✏️ 小試身手：</b>{len(u_qs)} 題 ｜ <b>🏫 生活案例：</b>{len(u.get('life_cases',[]))} 個
@@ -1143,8 +1284,8 @@ elif is_teacher_ready:
         with c_sum1:
             st.markdown(f"""
             <div class="summary-metric-card" style="border-left: 5px solid #22c55e;">
-                <div style="font-size: 1.1rem; color: #cbd5e1; margin-bottom: 0.3rem;">📅 今日學習進度</div>
-                <div style="font-size: 2rem; font-weight: 800; color: #4ade80;">
+                <div style="font-size: var(--fluid-sub); color: #cbd5e1; margin-bottom: 0.3rem;">📅 今日學習進度</div>
+                <div style="font-size: clamp(1.4rem, 1.2vw + 1rem, 1.85rem); font-weight: 800; color: #4ade80;">
                     今天有 {summary['completed_today_count']} 位學生完成學習
                 </div>
             </div>
@@ -1154,8 +1295,8 @@ elif is_teacher_ready:
             attention_color = "#f87171" if summary['need_attention_count'] > 0 else "#94a3b8"
             st.markdown(f"""
             <div class="summary-metric-card" style="border-left: 5px solid {attention_color};">
-                <div style="font-size: 1.1rem; color: #cbd5e1; margin-bottom: 0.3rem;">💡 教學關懷提醒</div>
-                <div style="font-size: 2rem; font-weight: 800; color: {attention_color};">
+                <div style="font-size: var(--fluid-sub); color: #cbd5e1; margin-bottom: 0.3rem;">💡 教學關懷提醒</div>
+                <div style="font-size: clamp(1.4rem, 1.2vw + 1rem, 1.85rem); font-weight: 800; color: {attention_color};">
                     其中 {summary['need_attention_count']} 位學生可能需要老師關心
                 </div>
             </div>
@@ -1235,8 +1376,8 @@ else:
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <span class="brand-mark">民</span>
                 <div>
-                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 700; line-height: 1.2;">國中公民思辨星系 ｜ AI 智慧自主學習館</h1>
-                    <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
+                    <h1 style="margin: 0; font-size: var(--fluid-h1); font-weight: 700; line-height: 1.2;">國中公民思辨星系 ｜ AI 智慧自主學習館</h1>
+                    <p style="margin: 0.2rem 0 0 0; font-size: var(--fluid-sub); color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
                 </div>
             </div>
         </div>
@@ -1248,11 +1389,11 @@ else:
     <div style="background: rgba(22, 46, 82, 0.85); border: 2.5px solid #f4d38b; border-radius: 18px; padding: 2.2rem 2.5rem; margin: 1.5rem 0 2rem 0; text-align: center; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(244, 211, 139, 0.15);">
         <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.9rem; margin-bottom: 0.8rem;">
             <span class="pulse-dot" style="width: 0.85rem; height: 0.85rem; background: #f4d38b; box-shadow: 0 0 14px #f4d38b;"></span>
-            <h2 style="margin: 0; font-family: var(--font-serif); font-size: 2.15rem; font-weight: 900; color: #ffffff; letter-spacing: 0.04em;">
+            <h2 style="margin: 0; font-family: var(--font-serif); font-size: var(--fluid-h2); font-weight: 900; color: #ffffff; letter-spacing: 0.04em;">
                 航行準備中 ｜ 請先完成左欄資料登記
             </h2>
         </div>
-        <p style="margin: 0.4rem 0 0 0; font-size: 1.22rem; color: #f4d38b; font-weight: 700; letter-spacing: 0.04em;">
+        <p style="margin: 0.4rem 0 0 0; font-size: clamp(1.08rem, 0.4vw + 1rem, 1.25rem); color: #f4d38b; font-weight: 700; letter-spacing: 0.04em;">
             👈 請由左側邊欄選定操作身分、填寫班級座號姓名並挑選學習單元，即可立即啟航開展學習！
         </p>
     </div>
@@ -1266,25 +1407,25 @@ else:
     # 🌟 星系特色功能導覽（精簡版）
     st.markdown("""
     <div style="margin-top: 1.5rem;">
-        <h3 style="color: #95c6f4; font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 0.9rem;">
+        <h3 style="color: #95c6f4; font-family: var(--font-serif); font-size: var(--fluid-h3); margin-bottom: 0.9rem;">
             🌟 星系特色功能導覽
         </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">📖 白話重點 ＆ 直式心智圖</h4>
-                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">輕鬆看懂核心重點，直式心智圖清晰免橫滑。</p>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">📖 白話重點 ＆ 直式心智圖</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">輕鬆看懂核心重點，直式心智圖清晰免橫滑。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">✏️ 8 題素養情境小試身手</h4>
-                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">✏️ 8 題素養情境小試身手</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">💬 公民 AI 助教隨身問</h4>
-                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">💬 公民 AI 助教隨身問</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">🌱 自主成長學習足跡</h4>
-                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">點亮個人探索星宿，無排名壓力、自主步調進步。</p>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">🌱 自主成長學習足跡</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">點亮個人探索星宿，無排名壓力、自主步調進步。</p>
             </div>
         </div>
     </div>

@@ -71,6 +71,36 @@
 
 | 檔案名稱 / 路徑 | 類型 | 修訂說明 |
 | :--- | :--- | :--- |
-| [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | 1. 調整 `user_role` 初始為 `"none"`。<br>2. 側邊欄增加身分與單元佔位項。<br>3. 實作 `is_student_ready` 嚴格條件路由。<br>4. 新增未完成設定時之「🚀 啟航指引」檢核看板。<br>5. 支援一鍵重選單元返回引導。 |
-| [`DEVELOPMENT_LOG.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 主開發日誌 | 補充階段 19（首頁進入防禦與學習資料條件載入重構）。 |
-| [`DEVELOPMENT_LOG_20261004.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 本日日誌 | 2026-10-04 當日開發紀錄檔（新增）。 |
+| [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | 1. 調整 `user_role` 初始為 `"none"`。<br>2. 側邊欄增加身分與單元佔位項。<br>3. 實作 `is_student_ready` 嚴格條件路由。<br>4. 建立全載具自適應流體字級體系（`--fluid-*` 變數）。<br>5. 側邊欄改為班級/座號雙欄+姓名獨立列，消除文字擠壓。<br>6. 全站淘汰硬編碼小字體，全面保底 15px~16px 清晰易讀。 |
+| [`DEVELOPMENT_LOG.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 主開發日誌 | 補充階段 19 與階段 20（全載具自適應流體字級與排版優化）。 |
+| [`DEVELOPMENT_LOG_20261004.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 本日日誌 | 2026-10-04 當日開發紀錄檔（新增與更新）。 |
+
+---
+
+## 🎨 四、 全載具自適應流體排版與字體優化 (Phase 20)
+
+### 1. 核心問題與成因剖析
+- **成因一（側邊欄三欄擁擠）**：先前為縮減側邊欄高度，將班級、座號、姓名擠在同一行（`columns([1, 1, 1.4])`），在側邊欄約 300px 寬度下，各輸入欄位僅分得 70~90px，導致標籤與文字緊縮，視覺感受過小。
+- **成因二（硬編碼小字體遺留）**：部分 HTML 卡片、眉標、副標題與時間戳記寫死為 `0.72rem` (約 11.5px)、`0.82rem` (約 13px) 或 `0.88rem` (約 14px)，在不同載具解析度下顯得過於細小難讀。
+
+### 2. 重構與優化措施
+1. **全載具自適應流體字級體系 (`:root`)**：
+   - `--fluid-base`: `clamp(15.5px, 0.4vw + 14.5px, 17.5px)`
+   - `--fluid-h1`: `clamp(1.75rem, 1.8vw + 1.25rem, 2.35rem)`
+   - `--fluid-h2`: `clamp(1.45rem, 1.3vw + 1.1rem, 1.95rem)`
+   - `--fluid-h3`: `clamp(1.22rem, 0.9vw + 0.95rem, 1.55rem)`
+   - `--fluid-h4`: `clamp(1.1rem, 0.6vw + 0.95rem, 1.35rem)`
+   - `--fluid-body`: `clamp(1.02rem, 0.35vw + 0.96rem, 1.16rem)`
+   - `--fluid-sub`: `clamp(0.95rem, 0.25vw + 0.9rem, 1.05rem)`
+2. **全域元件防護涵蓋**：
+   - 全面覆蓋 Streamlit 各元件（`stRadio`, `stCheckbox`, `stSelectbox`, `stTextInput`, `stAlert`, `stExpander`, `stCaptionContainer`），保證正文皆不小於 16px、輔助字級不小於 15px。
+3. **側邊欄學生基本資料結構優化**：
+   - 第一列：`col_c, col_s = st.columns(2)` 放置班級與座號（各 ~140px，間距舒展無折行）。
+   - 第二列：全寬姓名輸入框（~280px，輸入體驗自然寬敞）。
+   - 保留頂部 `padding-top: 1.2rem` 緊湊設計，使「選擇學習單元」選單展開時依然在第一屏可視範圍內，不必縮小網頁。
+4. **載具斷點自適應響應**：
+   - 手機端 (`<= 640px`)：保底字級 15.5px。
+   - 平板端 (`641px ~ 1024px`)：字級 16.5px。
+   - 一般桌機 (`1025px ~ 1440px`)：字級 17px。
+   - 大螢幕桌機 (`> 1440px`)：字級 17.5px。
+
