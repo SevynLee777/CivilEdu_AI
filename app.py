@@ -322,77 +322,111 @@ st.markdown("""
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     }
 
-    /* Tabs Styling - 大字體、高對比、奢華星系卡片導航 */
+    /* ══════════════════════════════════════════════════════════════════════
+       四大學習模組頁籤（Tab）奢華發光大卡片導航 — 支援 Streamlit 1.59+ (React-Aria)
+       ══════════════════════════════════════════════════════════════════════ */
     div[data-testid="stTabs"] {
         background-color: transparent !important;
         border-bottom: 2px solid var(--galaxy-line) !important;
-        margin-bottom: 2rem !important;
-        padding-bottom: 0.5rem !important;
+        margin-bottom: 2.2rem !important;
+        padding-bottom: 0.8rem !important;
     }
 
-    div[data-testid="stTabs"] div[role="tablist"],
-    div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
-        gap: 0.85rem !important;
-        padding: 0.6rem 0.2rem 1.1rem 0.2rem !important;
+    div[data-testid="stTabs"] [role="tablist"],
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"],
+    div[data-testid="stTabs"] .react-aria-TabList {
+        gap: 1.1rem !important;
+        padding: 0.6rem 0.2rem 1.2rem 0.2rem !important;
         display: flex !important;
         flex-wrap: wrap !important;
+        align-items: center !important;
+        border: none !important;
     }
 
+    div[data-testid="stTabs"] [role="tablist"]::after {
+        display: none !important;
+    }
+
+    /* 頁籤卡片本體：全面覆蓋 div[data-testid="stTab"], [role="tab"], .react-aria-Tab 與 button */
+    div[data-testid="stTabs"] [data-testid="stTab"],
+    div[data-testid="stTabs"] [role="tab"],
+    div[data-testid="stTabs"] .react-aria-Tab,
     div[data-testid="stTabs"] button,
     button[data-baseweb="tab"] {
-        background: rgba(14, 29, 51, 0.82) !important;
-        border: 2px solid rgba(149, 198, 244, 0.38) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: auto !important;
+        min-height: 54px !important;
+        background: rgba(14, 29, 51, 0.9) !important;
+        border: 2.2px solid rgba(149, 198, 244, 0.45) !important;
         border-radius: 16px !important;
         margin-right: 0 !important;
-        padding: 0.82rem 1.8rem !important;
+        padding: 0.9rem 2rem !important;
         transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35) !important;
+        box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4) !important;
         cursor: pointer !important;
+        text-decoration: none !important;
     }
 
-    div[data-testid="stTabs"] button:hover,
-    button[data-baseweb="tab"]:hover {
-        border-color: rgba(244, 211, 139, 0.75) !important;
-        background: rgba(25, 48, 80, 0.95) !important;
+    /* 懸停 Hover 狀態 */
+    div[data-testid="stTabs"] [data-testid="stTab"]:hover,
+    div[data-testid="stTabs"] [role="tab"]:hover,
+    div[data-testid="stTabs"] .react-aria-Tab:hover,
+    div[data-testid="stTabs"] button:hover {
+        border-color: rgba(244, 211, 139, 0.85) !important;
+        background: rgba(26, 52, 88, 0.96) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.52) !important;
     }
 
+    /* 頁籤內部文字（超大、粗體、高對比冰藍） */
+    div[data-testid="stTabs"] [data-testid="stTab"],
+    div[data-testid="stTabs"] [data-testid="stTab"] *,
+    div[data-testid="stTabs"] [role="tab"],
+    div[data-testid="stTabs"] [role="tab"] *,
+    div[data-testid="stTabs"] .react-aria-Tab,
+    div[data-testid="stTabs"] .react-aria-Tab *,
     div[data-testid="stTabs"] button p,
     div[data-testid="stTabs"] button span,
-    div[data-testid="stTabs"] button div[data-testid="stMarkdownContainer"] p,
     button[data-baseweb="tab"] p,
-    button[data-baseweb="tab"] span,
-    button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
-        color: #dbeafe !important;
+    button[data-baseweb="tab"] span {
         font-family: var(--font-sans) !important;
-        font-size: clamp(1.28rem, 0.6vw + 1.18rem, 1.55rem) !important;
+        font-size: clamp(1.35rem, 0.65vw + 1.22rem, 1.65rem) !important;
         font-weight: 800 !important;
         letter-spacing: 0.04em !important;
         line-height: 1.4 !important;
-        margin: 0 !important;
+        color: #dbeafe !important;
     }
 
-    div[data-testid="stTabs"] button[aria-selected="true"],
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(38, 72, 112, 0.95) 0%, rgba(18, 38, 66, 1) 100%) !important;
-        border: 2.8px solid var(--galaxy-amber) !important;
-        box-shadow: 0 0 22px rgba(244, 211, 139, 0.42), 0 8px 24px rgba(0, 0, 0, 0.45) !important;
-        transform: translateY(-2px) scale(1.02) !important;
+    /* 選中（Active / Selected）狀態特大高亮金框 */
+    div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"],
+    div[data-testid="stTabs"] [data-testid="stTab"][data-selected="true"],
+    div[data-testid="stTabs"] [data-testid="stTab"][data-selected],
+    div[data-testid="stTabs"] [role="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] [role="tab"][data-selected],
+    div[data-testid="stTabs"] .react-aria-Tab[data-selected],
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(38, 74, 118, 0.98) 0%, rgba(18, 38, 68, 1) 100%) !important;
+        border: 3px solid var(--galaxy-amber) !important;
+        box-shadow: 0 0 25px rgba(244, 211, 139, 0.45), 0 8px 26px rgba(0, 0, 0, 0.55) !important;
+        transform: translateY(-2px) scale(1.025) !important;
     }
 
-    div[data-testid="stTabs"] button[aria-selected="true"] p,
-    div[data-testid="stTabs"] button[aria-selected="true"] span,
-    div[data-testid="stTabs"] button[aria-selected="true"] div[data-testid="stMarkdownContainer"] p,
-    button[data-baseweb="tab"][aria-selected="true"] p,
-    button[data-baseweb="tab"][aria-selected="true"] span,
-    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+    div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] [data-testid="stTab"][data-selected="true"] *,
+    div[data-testid="stTabs"] [data-testid="stTab"][data-selected] *,
+    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] [role="tab"][data-selected] *,
+    div[data-testid="stTabs"] .react-aria-Tab[data-selected] *,
+    div[data-testid="stTabs"] button[aria-selected="true"] * {
         color: #ffffff !important;
         font-weight: 900 !important;
-        text-shadow: 0 0 12px rgba(244, 211, 139, 0.6) !important;
+        text-shadow: 0 0 14px rgba(244, 211, 139, 0.7) !important;
     }
 
-    /* 移除原生底線由發光卡片外框取代 */
+    /* 隱藏原生底線指示器，由發光邊框取代 */
+    div[data-testid="stTabs"] .react-aria-SelectionIndicator,
     div[data-testid="stTabs"] div[data-baseweb="tab-highlight"],
     div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
         display: none !important;
@@ -603,15 +637,20 @@ st.markdown("""
             height: 2.3rem !important;
             font-size: 1.2rem !important;
         }
+        div[data-testid="stTabs"] [data-testid="stTab"],
+        div[data-testid="stTabs"] [role="tab"],
+        div[data-testid="stTabs"] .react-aria-Tab,
         div[data-testid="stTabs"] button,
         button[data-baseweb="tab"] {
             padding: 0.65rem 1.15rem !important;
             border-radius: 12px !important;
+            min-height: 44px !important;
         }
-        div[data-testid="stTabs"] button p,
-        div[data-testid="stTabs"] button span,
-        div[data-testid="stTabs"] button div[data-testid="stMarkdownContainer"] p {
-            font-size: 1.18rem !important;
+        div[data-testid="stTabs"] [data-testid="stTab"] *,
+        div[data-testid="stTabs"] [role="tab"] *,
+        div[data-testid="stTabs"] .react-aria-Tab *,
+        div[data-testid="stTabs"] button * {
+            font-size: 1.2rem !important;
             font-weight: 800 !important;
         }
     }
@@ -1452,28 +1491,28 @@ else:
         if st.button("🔑 開啟教師密碼驗證視窗", type="primary"):
             teacher_auth_dialog()
 
-    # 🌟 星系特色功能導覽（精簡版）
+    # 🌟 星系特色功能導覽（特大字體加粗強調版）
     st.markdown("""
-    <div style="margin-top: 1.5rem;">
-        <h3 style="color: #95c6f4; font-family: var(--font-serif); font-size: var(--fluid-h3); margin-bottom: 0.9rem;">
+    <div style="margin-top: 2rem;">
+        <h3 style="color: #95c6f4; font-family: var(--font-serif); font-size: clamp(1.45rem, 0.9vw + 1.25rem, 1.95rem); margin-bottom: 1.2rem; font-weight: 900; letter-spacing: 0.04em;">
             🌟 星系特色功能導覽
         </h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid var(--galaxy-gold);">
-                <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">📖 開始學習</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">輕鬆看懂白話核心重點，直式心智圖清晰免橫滑。</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.6rem 1.7rem; border-left: 6px solid var(--galaxy-gold); background: rgba(14, 29, 51, 0.92); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); border-radius: 18px;">
+                <h4 style="color: #95c6f4; margin: 0 0 0.65rem 0; font-size: clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem); font-weight: 900; letter-spacing: 0.02em;">📖 開始學習</h4>
+                <p style="color: #e2e8f0; font-size: clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem); margin: 0; line-height: 1.7; font-weight: 500;">輕鬆看懂白話核心重點，直式心智圖清晰免橫滑。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid var(--galaxy-amber);">
-                <h4 style="color: #f4d38b; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">✏️ 小試身手</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">8 題生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.6rem 1.7rem; border-left: 6px solid var(--galaxy-amber); background: rgba(14, 29, 51, 0.92); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); border-radius: 18px;">
+                <h4 style="color: #f4d38b; margin: 0 0 0.65rem 0; font-size: clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem); font-weight: 900; letter-spacing: 0.02em;">✏️ 小試身手</h4>
+                <p style="color: #e2e8f0; font-size: clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem); margin: 0; line-height: 1.7; font-weight: 500;">8 題生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid #38bdf8;">
-                <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">💬 公民 AI 助教隨身問</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.6rem 1.7rem; border-left: 6px solid #38bdf8; background: rgba(14, 29, 51, 0.92); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); border-radius: 18px;">
+                <h4 style="color: #38bdf8; margin: 0 0 0.65rem 0; font-size: clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem); font-weight: 900; letter-spacing: 0.02em;">💬 公民 AI 助教隨身問</h4>
+                <p style="color: #e2e8f0; font-size: clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem); margin: 0; line-height: 1.7; font-weight: 500;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid #4ade80;">
-                <h4 style="color: #4ade80; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">🌱 我的足跡</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">點亮個人自主探索星宿，無排名壓力、自主步調進步。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.6rem 1.7rem; border-left: 6px solid #4ade80; background: rgba(14, 29, 51, 0.92); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); border-radius: 18px;">
+                <h4 style="color: #4ade80; margin: 0 0 0.65rem 0; font-size: clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem); font-weight: 900; letter-spacing: 0.02em;">🌱 我的足跡</h4>
+                <p style="color: #e2e8f0; font-size: clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem); margin: 0; line-height: 1.7; font-weight: 500;">點亮個人自主探索星宿，無排名壓力、自主步調進步。</p>
             </div>
         </div>
     </div>

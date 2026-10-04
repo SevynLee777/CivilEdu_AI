@@ -130,4 +130,23 @@
 3. **首頁功能導覽卡片同步強調**：
    - 特色導覽卡片對齊四模組名稱，標題放大至 `--fluid-h3`（字重 800），並加入彩色立體左側邊條（金、琥珀、天藍、翠綠），形成全站一致的視覺指引。
 
+---
+
+## 💎 六、 Streamlit 1.59+ React-Aria 頁籤選擇器修復與四特色導覽卡片特大加粗升級 (Phase 22)
+
+### 1. 深度根本原因調查與突破：
+- **核心盲點**：經深入探查 Streamlit 1.59.1 前端核心源碼，發現 Streamlit 最新架構已將頁籤模組由舊版 BaseWeb 全面遷移至 `@react-aria/tabs`。
+- **失效原因**：頁籤生成的 DOM 結構不再是 `<button data-baseweb="tab">`，而是 `<div role="tab" data-testid="stTab" class="react-aria-Tab">`，且 Streamlit 在該元素上強制內嵌了 `fontSize: e.fontSizes.sm` (14px) 與 `height: e.sizes.tabHeight` (40px)。因此舊版針對 `button` 的樣式完全無法命中該元素！
+
+### 2. 優化修復措施：
+1. **全面覆蓋 React-Aria 選擇器體系**：
+   - 納入 `div[data-testid="stTabs"] [data-testid="stTab"]`、`[role="tab"]`、`.react-aria-Tab`。
+   - 覆蓋高度與文字：`height: auto !important; min-height: 54px !important;`。
+   - 字體正式拉升至 `clamp(1.35rem, 0.65vw + 1.22rem, 1.65rem)`（約 **24px ～ 28px**），字重提升為 `800` / `900`。
+   - 選中狀態高亮金框（`3px solid var(--galaxy-amber)`）與金黃外發光（`text-shadow: 0 0 14px rgba(244, 211, 139, 0.7)`）全面精準生效。
+2. **「🌟 星系特色功能導覽」四個卡片升級特大加粗強調版**：
+   - 卡片標題（`📖 開始學習`、`✏️ 小試身手`、`💬 公民 AI 助教隨身問`、`🌱 我的足跡`）：放大至 `clamp(1.4rem, 0.7vw + 1.22rem, 1.75rem)`（約 **24px ～ 30px**），字重 `900` 特粗。
+   - 卡片內文說明：放大至 `clamp(1.12rem, 0.35vw + 1.05rem, 1.26rem)`（約 **19px ～ 22px**），字重 `500` 高對比冰白，行高 `1.7`。
+   - 卡片視覺外觀：加厚邊框至 `6px solid`（金、琥珀、天藍、翠綠彩色分類標識），內距放大至 `1.6rem 1.7rem`，搭配 18px 圓角與深邃陰影。
+
 
