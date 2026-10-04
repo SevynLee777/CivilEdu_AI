@@ -322,43 +322,80 @@ st.markdown("""
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     }
 
-    /* Tabs Styling */
+    /* Tabs Styling - 大字體、高對比、奢華星系卡片導航 */
     div[data-testid="stTabs"] {
         background-color: transparent !important;
-        border-bottom: 1px solid var(--galaxy-line) !important;
-        margin-bottom: 1.5rem !important;
+        border-bottom: 2px solid var(--galaxy-line) !important;
+        margin-bottom: 2rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    div[data-testid="stTabs"] div[role="tablist"],
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
+        gap: 0.85rem !important;
+        padding: 0.6rem 0.2rem 1.1rem 0.2rem !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
     }
 
     div[data-testid="stTabs"] button,
     button[data-baseweb="tab"] {
-        background-color: transparent !important;
-        border: 1px solid transparent !important;
-        border-radius: 999px !important;
-        margin-right: 8px !important;
-        padding: 0.55rem 1.3rem !important;
-        transition: all 0.25s ease !important;
+        background: rgba(14, 29, 51, 0.82) !important;
+        border: 2px solid rgba(149, 198, 244, 0.38) !important;
+        border-radius: 16px !important;
+        margin-right: 0 !important;
+        padding: 0.82rem 1.8rem !important;
+        transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35) !important;
+        cursor: pointer !important;
+    }
+
+    div[data-testid="stTabs"] button:hover,
+    button[data-baseweb="tab"]:hover {
+        border-color: rgba(244, 211, 139, 0.75) !important;
+        background: rgba(25, 48, 80, 0.95) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
     }
 
     div[data-testid="stTabs"] button p,
     div[data-testid="stTabs"] button span,
+    div[data-testid="stTabs"] button div[data-testid="stMarkdownContainer"] p,
     button[data-baseweb="tab"] p,
-    button[data-baseweb="tab"] span {
-        color: var(--galaxy-paper-muted) !important;
-        font-size: 1.02rem !important;
-        font-weight: 600 !important;
+    button[data-baseweb="tab"] span,
+    button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
+        color: #dbeafe !important;
+        font-family: var(--font-sans) !important;
+        font-size: clamp(1.28rem, 0.6vw + 1.18rem, 1.55rem) !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
     }
 
     div[data-testid="stTabs"] button[aria-selected="true"],
     button[data-baseweb="tab"][aria-selected="true"] {
-        background: rgba(208, 224, 238, 0.08) !important;
-        border: 1px solid var(--galaxy-line) !important;
-        border-bottom: 2px solid var(--galaxy-amber) !important;
+        background: linear-gradient(135deg, rgba(38, 72, 112, 0.95) 0%, rgba(18, 38, 66, 1) 100%) !important;
+        border: 2.8px solid var(--galaxy-amber) !important;
+        box-shadow: 0 0 22px rgba(244, 211, 139, 0.42), 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+        transform: translateY(-2px) scale(1.02) !important;
     }
 
     div[data-testid="stTabs"] button[aria-selected="true"] p,
-    div[data-testid="stTabs"] button[aria-selected="true"] span {
-        color: var(--galaxy-amber) !important;
-        font-weight: 700 !important;
+    div[data-testid="stTabs"] button[aria-selected="true"] span,
+    div[data-testid="stTabs"] button[aria-selected="true"] div[data-testid="stMarkdownContainer"] p,
+    button[data-baseweb="tab"][aria-selected="true"] p,
+    button[data-baseweb="tab"][aria-selected="true"] span,
+    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        text-shadow: 0 0 12px rgba(244, 211, 139, 0.6) !important;
+    }
+
+    /* 移除原生底線由發光卡片外框取代 */
+    div[data-testid="stTabs"] div[data-baseweb="tab-highlight"],
+    div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
+        display: none !important;
     }
 
     /* Badges */
@@ -565,6 +602,17 @@ st.markdown("""
             width: 2.3rem !important;
             height: 2.3rem !important;
             font-size: 1.2rem !important;
+        }
+        div[data-testid="stTabs"] button,
+        button[data-baseweb="tab"] {
+            padding: 0.65rem 1.15rem !important;
+            border-radius: 12px !important;
+        }
+        div[data-testid="stTabs"] button p,
+        div[data-testid="stTabs"] button span,
+        div[data-testid="stTabs"] button div[data-testid="stMarkdownContainer"] p {
+            font-size: 1.18rem !important;
+            font-weight: 800 !important;
         }
     }
 
@@ -870,7 +918,7 @@ if is_student_ready:
     # 1. 📖 開始學習 (Learn)
     # ──────────────────────────────────────────────
     with tab_learn:
-        st.markdown(f"### 📖 {current_unit['title']} — 重點與生活實例")
+        st.markdown(f"## 📖 開始學習 ｜ {current_unit['title']} 重點與生活實例")
 
         # 1. 國中生白話整理（輕鬆看懂這堂課）
         easy_content = current_unit.get("easy_content", "")
@@ -945,7 +993,7 @@ if is_student_ready:
     # 2. ✏️ 小試身手 (Practice)
     # ──────────────────────────────────────────────
     with tab_practice:
-        st.markdown(f"### ✏️ 小試身手 — {current_unit['title']}")
+        st.markdown(f"## ✏️ 小試身手 ｜ {current_unit['title']}")
         questions = current_unit.get("practice_questions", [])
         remedy_guides = current_unit.get("remediation_guides", {})
         st.caption(f"共 {len(questions)} 道生活化概念練習，了解自己掌握了哪些重點！")
@@ -1074,7 +1122,7 @@ if is_student_ready:
     # 3. 💬 公民 AI 助教隨身問 (AI Tutor)
     # ──────────────────────────────────────────────
     with tab_ai_tutor:
-        st.markdown(f"### 💬 公民 AI 助教隨身問 — {current_unit['title']}")
+        st.markdown(f"## 💬 公民 AI 助教隨身問 ｜ {current_unit['title']}")
         st.caption("對這堂課還有任何不懂的疑問嗎？隨時問 AI 助教，用校園日常生活幫你解惑！")
 
         q_user = st.text_input("輸入你的問題（例如：為什麼主權對外要獨立？生活中有什麼例子？）：", key=f"chat_input_{current_unit['id']}")
@@ -1100,7 +1148,7 @@ if is_student_ready:
     # 4. 🌱 我的足跡 (Footprint)
     # ──────────────────────────────────────────────
     with tab_footprint:
-        st.markdown("### 🌱 我的自主學習足跡")
+        st.markdown("## 🌱 我的足跡 ｜ 自主學習歷程記錄")
         st.caption("記錄你在每個學習單元的成長歷程。按照自己的節奏學習，每一步都是進步！")
 
         footprints = logger_utils.get_student_footprint(student_info)
@@ -1411,21 +1459,21 @@ else:
             🌟 星系特色功能導覽
         </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">📖 白話重點 ＆ 直式心智圖</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">輕鬆看懂核心重點，直式心智圖清晰免橫滑。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid var(--galaxy-gold);">
+                <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">📖 開始學習</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">輕鬆看懂白話核心重點，直式心智圖清晰免橫滑。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">✏️ 8 題素養情境小試身手</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid var(--galaxy-amber);">
+                <h4 style="color: #f4d38b; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">✏️ 小試身手</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">8 題生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">💬 公民 AI 助教隨身問</h4>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid #38bdf8;">
+                <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">💬 公民 AI 助教隨身問</h4>
                 <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
             </div>
-            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: var(--fluid-h4);">🌱 自主成長學習足跡</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">點亮個人探索星宿，無排名壓力、自主步調進步。</p>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.2rem 1.4rem; border-left: 4px solid #4ade80;">
+                <h4 style="color: #4ade80; margin: 0 0 0.5rem 0; font-size: var(--fluid-h3); font-weight: 800;">🌱 我的足跡</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">點亮個人自主探索星宿，無排名壓力、自主步調進步。</p>
             </div>
         </div>
     </div>
