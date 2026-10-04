@@ -395,6 +395,57 @@ st.markdown("""
         fill: var(--galaxy-amber) !important;
         stroke: var(--galaxy-amber) !important;
     }
+
+    /* 側邊欄頂部間距緊湊化與視窗高度優化 */
+    [data-testid="stSidebar"] {
+        padding-top: 0 !important;
+        overflow-y: auto !important;
+    }
+    [data-testid="stSidebar"] .block-container,
+    [data-testid="stSidebarContent"],
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 1.2rem !important;
+        padding-bottom: 4rem !important;
+    }
+    [data-testid="stSidebar"] h3 {
+        font-size: 1.05rem !important;
+        margin-top: 0.35rem !important;
+        margin-bottom: 0.25rem !important;
+        padding: 0 !important;
+    }
+    [data-testid="stSidebar"] hr {
+        margin: 0.5rem 0 !important;
+        border-color: rgba(150, 192, 230, 0.2) !important;
+    }
+    [data-testid="stSidebar"] .stRadio > div {
+        gap: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] .stRadio label {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"],
+    [data-testid="stSidebar"] [data-testid="stTextInput"] {
+        margin-bottom: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] label {
+        font-size: 0.88rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* BaseWeb 下拉選單浮動層 (Popover / Menu) 視覺與高度優化 */
+    div[data-baseweb="popover"] {
+        z-index: 999999 !important;
+    }
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        max-height: 240px !important;
+    }
+    ul[data-testid="stSelectboxVirtualDropdown"] li {
+        padding-top: 7px !important;
+        padding-bottom: 7px !important;
+        min-height: 36px !important;
+        font-size: 0.95rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -545,13 +596,14 @@ with st.sidebar:
         class_options = [str(i) for i in range(801, 822)]
         seat_options = [f"{i:02d}" for i in range(1, 31)]
 
-        col_c, col_s = st.columns(2)
+        col_c, col_s, col_n = st.columns([1, 1, 1.4])
         with col_c:
             selected_class = st.selectbox("班級", class_options, index=class_options.index(st.session_state.student_class) if st.session_state.student_class in class_options else 0)
         with col_s:
             selected_seat = st.selectbox("座號", seat_options, index=seat_options.index(st.session_state.student_seat) if st.session_state.student_seat in seat_options else 0)
+        with col_n:
+            entered_name = st.text_input("姓名", value=st.session_state.student_name, placeholder="王小明")
         
-        entered_name = st.text_input("姓名", value=st.session_state.student_name, placeholder="例如：王小明")
         st.session_state.student_class = selected_class
         st.session_state.student_seat = selected_seat
         st.session_state.student_name = entered_name.strip()
