@@ -1187,77 +1187,22 @@ else:
                     <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #8ba5be; letter-spacing: 0.05em;">歷屆觀念導引・法政思辨啟蒙・AI 助教陪伴自主成長</p>
                 </div>
             </div>
-            <div class="pulse-status">
-                <span class="pulse-dot"></span>
-                <span>航行準備中 ｜ 請先完成左欄資料登記</span>
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 狀態檢查卡片
-    step1_done = st.session_state.user_role in ["student", "teacher"]
-    step1_text = (
-        "✅ 已選定：🎓 我是學生" if st.session_state.user_role == "student"
-        else ("✅ 已選定：👨‍🏫 我是老師" if st.session_state.user_role == "teacher"
-        else "⏳ 請在左欄點選「我是學生」或「我是老師」")
-    )
-    step1_color = "#4ade80" if step1_done else "#f59e0b"
-
-    step2_done = (st.session_state.user_role == "student")
-    step2_text = (
-        f"✅ 已選定：{st.session_state.student_class} 班 {st.session_state.student_seat} 號"
-        if step2_done else "⏳ 待選定學生身分後設定"
-    )
-    step2_color = "#4ade80" if step2_done else "#94a3b8"
-
-    step3_done = bool(st.session_state.student_name.strip()) and (st.session_state.user_role == "student")
-    step3_text = (
-        f"✅ 已輸入姓名：{st.session_state.student_name}"
-        if step3_done else (
-            "⏳ 請在左欄「姓名」欄位輸入您的名字（例如：王小明）"
-            if st.session_state.user_role == "student" else "⏳ 待選定學生身分"
-        )
-    )
-    step3_color = "#4ade80" if step3_done else ("#f87171" if st.session_state.user_role == "student" else "#94a3b8")
-
-    cur_unit_obj = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
-    step4_done = (cur_unit_obj is not None) and (st.session_state.user_role == "student")
-    step4_text = (
-        f"✅ 已選定單元：{cur_unit_obj['title']}"
-        if step4_done else (
-            "⏳ 請在左欄「選擇學習單元」下拉選取欲學習課次"
-            if st.session_state.user_role == "student" else "⏳ 待選定學生身分"
-        )
-    )
-    step4_color = "#4ade80" if step4_done else ("#f87171" if st.session_state.user_role == "student" else "#94a3b8")
-
-    st.markdown(f"""
-    <div style="background: rgba(13, 28, 51, 0.72); border: 1px solid var(--galaxy-line); border-radius: 16px; padding: 1.8rem 2rem; margin-bottom: 1.8rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);">
-        <h3 style="color: #95c6f4; margin: 0 0 0.8rem 0; font-family: var(--font-serif); font-size: 1.35rem;">
-            🚀 啟航指引：請於左側邊欄完成設定以展開學習
-        </h3>
-        <p style="color: #d0e0ee; line-height: 1.75; font-size: 1.05rem; margin-bottom: 1.2rem;">
-            歡迎來到公民自主學習星系！為了為您客製化學習歷程與 AI 助教陪伴，<b>請先在左欄完成身分、班級、姓名與學習單元選定</b>。完成後右欄將即刻為您載入單元重點精華、直式心智圖與素養練習！
-        </p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1rem;">
-            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step1_color}; border-radius: 10px; padding: 1rem;">
-                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">1️⃣ 選擇操作身分</div>
-                <div style="font-size: 0.95rem; color: #cbd5e1;">{step1_text}</div>
-            </div>
-            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step2_color}; border-radius: 10px; padding: 1rem;">
-                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">2️⃣ 選擇班級座號</div>
-                <div style="font-size: 0.95rem; color: #cbd5e1;">{step2_text}</div>
-            </div>
-            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step3_color}; border-radius: 10px; padding: 1rem;">
-                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">3️⃣ 輸入學生姓名</div>
-                <div style="font-size: 0.95rem; color: #cbd5e1;">{step3_text}</div>
-            </div>
-            <div style="background: rgba(10, 21, 38, 0.7); border: 1px solid rgba(149, 198, 244, 0.2); border-left: 4px solid {step4_color}; border-radius: 10px; padding: 1rem;">
-                <div style="font-weight: 700; color: #95c6f4; margin-bottom: 0.3rem;">4️⃣ 選定學習單元</div>
-                <div style="font-size: 0.95rem; color: #cbd5e1;">{step4_text}</div>
-            </div>
+    # 🚀 加大強調「航行準備中 ｜ 請先完成左欄資料登記」
+    st.markdown("""
+    <div style="background: rgba(22, 46, 82, 0.85); border: 2.5px solid #f4d38b; border-radius: 18px; padding: 2.2rem 2.5rem; margin: 1.5rem 0 2rem 0; text-align: center; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(244, 211, 139, 0.15);">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.9rem; margin-bottom: 0.8rem;">
+            <span class="pulse-dot" style="width: 0.85rem; height: 0.85rem; background: #f4d38b; box-shadow: 0 0 14px #f4d38b;"></span>
+            <h2 style="margin: 0; font-family: var(--font-serif); font-size: 2.15rem; font-weight: 900; color: #ffffff; letter-spacing: 0.04em;">
+                航行準備中 ｜ 請先完成左欄資料登記
+            </h2>
         </div>
+        <p style="margin: 0.4rem 0 0 0; font-size: 1.22rem; color: #f4d38b; font-weight: 700; letter-spacing: 0.04em;">
+            👈 請由左側邊欄選定操作身分、填寫班級座號姓名並挑選學習單元，即可立即啟航開展學習！
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1266,43 +1211,29 @@ else:
         if st.button("🔑 開啟教師密碼驗證視窗", type="primary"):
             teacher_auth_dialog()
 
-    # 專案四大特色導覽卡片
-    st.markdown("#### 🌟 星系特色功能導覽")
-    col_feat1, col_feat2 = st.columns(2)
-    with col_feat1:
-        st.markdown("""
-        <div class="feature-card">
-            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">📖 輕鬆看懂白話導讀 ＆ 直式樹狀心智圖</h4>
-            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
-                將生硬的法律與政體條文轉化為生活白話與校園案例，搭配由左至右、特大字體的直式心智圖，在手機、平板與桌機皆能免橫滑順暢瀏覽。
-            </p>
+    # 🌟 星系特色功能導覽（精簡版）
+    st.markdown("""
+    <div style="margin-top: 1.5rem;">
+        <h3 style="color: #95c6f4; font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 0.9rem;">
+            🌟 星系特色功能導覽
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">📖 白話重點 ＆ 直式心智圖</h4>
+                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">輕鬆看懂核心重點，直式心智圖清晰免橫滑。</p>
+            </div>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">✏️ 8 題素養情境小試身手</h4>
+                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
+            </div>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">💬 公民 AI 助教隨身問</h4>
+                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
+            </div>
+            <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.08rem;">🌱 自主成長學習足跡</h4>
+                <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">點亮個人探索星宿，無排名壓力、自主步調進步。</p>
+            </div>
         </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="feature-card">
-            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">✏️ 8 道素養情境小試身手 ＆ 觀念充電站</h4>
-            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
-                不考死背記憶，以真實生活情境為核心題目。若有錯題，AI 老師即時提供「白話秒懂、生活比喻、避坑口訣」三效合一的充電解析！
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_feat2:
-        st.markdown("""
-        <div class="feature-card">
-            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">💬 公民 AI 助教隨身問</h4>
-            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
-                隨選即問！學習中有任何疑問，不管是「為什麼主權對外要獨立？」或是生活時事，AI 助教隨時以淺顯易懂的校園實例為您解惑。
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="feature-card">
-            <h4 style="color: #95c6f4; margin: 0 0 0.5rem 0;">🌱 自主成長學習足跡（零排名無壓力）</h4>
-            <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin: 0;">
-                清晰記錄自己點亮的單元星宿與掌握狀態，系統絕不展示班級排名，保護每位同學依照自己的步調踏實進步。
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
