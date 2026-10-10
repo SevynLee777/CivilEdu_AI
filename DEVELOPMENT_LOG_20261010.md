@@ -17,6 +17,7 @@
 | **二** | **隨機選題、題序與選項洗牌** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)<br>[`units_db.json`](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 各單元題庫池擴充至 16 道素養選擇題，每次測驗動態隨機抽取 8 題、題序隨機打散、每題 ABCD 選項隨機洗牌，且正確答案動態精準對齊；重新測驗時自動刷新為全新題組。 |
 | **三** | **各單元生活案例增加為 4 則** | [`units_db.json`](file:///C:/Users/awen8/CivilEdu_AI/units_db.json)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)<br>[`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | 第一課與第二課生活案例由 2 則全面擴增為 4 則完整實例（涵蓋校園自治、日常生活、網路社群、社區公共），每則均包含故事描述與思辨焦點；AI 單元生成提示詞同步升級。 |
 | **四** | **Streamlit Cloud 熱重載與例外安全包裝** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | 針對雲端容器（Streamlit Cloud）模組快取熱重載可能產生之 `AttributeError`，建立安全自動 reload 與 `safe_extract_text_from_file_upload` / `safe_randomize_practice_questions` 本地雙重保險降級防護。 |
+| **五** | **標籤頁精簡改名為「問問AI助教」** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 將原「💬 公民 AI 助教隨身問」精簡改名為「💬 問問AI助教」，大幅減少字元寬度，有效避免窄螢幕與手機端標籤列擠壓折行；具備 Session State 平滑相容遷移。 |
 
 ---
 
@@ -145,7 +146,24 @@ AttributeError: module 'unit_manager' has no attribute 'extract_text_from_file_u
 
 ---
 
-## 🧪 六、 整合測試與驗證紀錄
+## 💡 六、 UI 精簡優化：學生端「問問AI助教」標籤頁更名
+
+### 1. 需求背景與空間優化
+原標籤名稱為「💬 公民 AI 助教隨身問」（共 11 個字元連同空格），在平板直向、筆電分頁縮放或手機等窄視窗下，容易導致標籤列水平溢出或被排擠折行。
+
+### 2. 優化重點
+1. **標籤名稱精簡**：由「`💬 公民 AI 助教隨身問`」精簡為「`💬 問問AI助教`」（字數減少近 40%），維持親切易懂的提問語意，並顯著釋放標籤列橫向空間。
+2. **Session State 平滑遷移**：
+   ```python
+   if st.session_state.get("student_tab_selection") == "💬 公民 AI 助教隨身問":
+       st.session_state.student_tab_selection = "💬 問問AI助教"
+   ```
+   若學生正在提問分頁中，熱重載時將無縫對接至新標籤頁，不會被重置回首頁。
+3. **全站一致性**：同步更新內頁標題（`### 💬 問問AI助教 — 單元名稱`）、首頁特色導覽卡片與專案說明文檔。
+
+---
+
+## 🧪 七、 整合測試與驗證紀錄
 
 透過自動化腳本驗證三大需求與 `.doc` 支援之核心邏輯：
 
@@ -188,10 +206,10 @@ Doc  - 檔案: 08_01_L2.doc (Word 97-2003 OLE2) -> 解析字數: 4,818 字
 
 ---
 
-## 🚀 七、 程式庫版本控制與部署狀態
+## 🚀 八、 程式庫版本控制與部署狀態
 
 - **遠端儲存庫**：`https://github.com/SevynLee777/CivilEdu_AI.git`
 - **當前分支**：`main`
-- **最新提交**：支援舊版 Word 97-2003 (`.doc`) 檔案上傳與 Streamlit Cloud 熱重載雙重安全機制
+- **最新提交**：標籤頁精簡為「問問AI助教」節省排版空間、支援舊版 Word 97-2003 (.doc) 檔案上傳解析
 - **工作區狀態**：已同步推送至 GitHub，Streamlit Cloud 自動觸發持續部署 (CI/CD)
 

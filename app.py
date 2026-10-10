@@ -1025,10 +1025,12 @@ if is_student_ready:
     valid_student_tabs = [
         "📖 開始學習",
         "✏️ 小試身手",
-        "💬 公民 AI 助教隨身問",
+        "💬 問問AI助教",
         "🌱 我的足跡"
     ]
-    if st.session_state.get("student_tab_selection") not in valid_student_tabs:
+    if st.session_state.get("student_tab_selection") == "💬 公民 AI 助教隨身問":
+        st.session_state.student_tab_selection = "💬 問問AI助教"
+    elif st.session_state.get("student_tab_selection") not in valid_student_tabs:
         st.session_state.student_tab_selection = valid_student_tabs[0]
 
     tab_learn, tab_practice, tab_ai_tutor, tab_footprint = st.tabs(
@@ -1256,10 +1258,10 @@ if is_student_ready:
                     st.rerun()
 
     # ──────────────────────────────────────────────
-    # 3. 💬 公民 AI 助教隨身問 (AI Tutor)
+    # 3. 💬 問問AI助教 (AI Tutor)
     # ──────────────────────────────────────────────
     with tab_ai_tutor:
-        st.markdown(f"### 💬 公民 AI 助教隨身問 — {current_unit['title']}")
+        st.markdown(f"### 💬 問問AI助教 — {current_unit['title']}")
         st.caption("對這堂課還有任何不懂的疑問嗎？隨時問 AI 助教，用校園日常生活幫你解惑！")
 
         q_user = st.text_input("輸入你的問題（例如：為什麼主權對外要獨立？生活中有什麼例子？）：", key=f"chat_input_{current_unit['id']}")
@@ -1650,7 +1652,7 @@ else:
                 <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">生活情境無壓力練習，每次隨機抽題與洗牌選項，錯題即享白話充電與避坑口訣。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.18rem; font-weight: 700;">💬 公民 AI 助教隨身問</h4>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.18rem; font-weight: 700;">💬 問問AI助教</h4>
                 <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">隨選即問，AI 老師以校園日常案例親切解惑。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">

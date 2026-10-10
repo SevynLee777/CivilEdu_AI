@@ -11,7 +11,7 @@
 - **學生端 (Student)**：完成身分、班級、座號、姓名登記並選定學習單元後，解鎖頂部銀河個人學習儀表板與四大核心模組：
   1. **📖 開始學習**：白話生活化手札重點、生活實例、直式樹狀心智圖（Mermaid `graph LR`）、一鍵直達練習按鈕。
   2. **✏️ 小試身手**：8 題生活情境素養題、即時批改評分、觀念充電站補強指南。
-  3. **💬 公民 AI 助教隨身問**：蘇格拉底式引導問答、推薦思辨啟發題。
+  3. **💬 問問AI助教**：蘇格拉底式引導問答、推薦思辨啟發題。
   4. **🌱 我的足跡**：自主學習歷程統計、答題完成度與錯題診斷分析。
 - **教師端 (Teacher)**：需通過專屬密碼驗證視窗（Modal Dialog），進入教師管理後台：
   - 教材單元管理（AI 自動生成 8 題素養題目、情境案例與心智圖、手動編修與刪除）。
@@ -115,12 +115,12 @@ flowchart TD
         QuizGrade --> SaveLog
 
         %% 模組 3
-        TabAI["【💬 公民 AI 助教隨身問】<br/>• 獨立思辨對話專區<br/>• 推薦提問引導思考"]:::pageNode
+        TabAI["【💬 問問AI助教】<br/>• 獨立思辨對話專區<br/>• 推薦提問引導思考"]:::pageNode
         SendPrompt["學生提問送出"]:::actionNode
         GeminiCall["Google GenAI API (gemini-2.5-flash)<br/>角色扮演：國中公民啟發式助教"]:::actionNode
         AIResponse["動態生成引導式回覆<br/>(引導反思而非直接給答案)"]:::pageNode
 
-        TabNav --> |"💬 公民 AI 助教隨身問"| TabAI
+        TabNav --> |"💬 問問AI助教"| TabAI
         TabAI --> SendPrompt
         SendPrompt --> GeminiCall
         GeminiCall --> AIResponse
