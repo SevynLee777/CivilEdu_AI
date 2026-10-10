@@ -973,7 +973,7 @@ if is_student_ready:
         life_cases = current_unit.get("life_cases", [])
         if life_cases:
             st.markdown("---")
-            st.markdown("#### 🏫 生活與校園情境案例")
+            st.markdown(f"#### 🏫 生活與校園情境案例 (共 {len(life_cases)} 則實例)")
             for c in life_cases:
                 st.markdown(f"""
                 <div class="case-card">
@@ -1016,9 +1016,21 @@ if is_student_ready:
     # ──────────────────────────────────────────────
     with tab_practice:
         st.markdown(f"### ✏️ 小試身手 — {current_unit['title']}")
-        questions = current_unit.get("practice_questions", [])
+        unit_id = current_unit.get("id", "default")
+        qs_key = f"active_practice_qs_{unit_id}"
+        round_key = f"practice_round_{unit_id}"
+
+        # 若尚未隨機選題或為空，則由題庫池隨機抽取 8 題，並洗牌題序與選項
+        if qs_key not in st.session_state or not st.session_state[qs_key]:
+            st.session_state[qs_key] = unit_manager.randomize_practice_questions(current_unit, num_questions=8)
+            st.session_state[round_key] = st.session_state.get(round_key, 0) + 1
+
+        questions = st.session_state[qs_key]
+        current_round = st.session_state.get(round_key, 1)
         remedy_guides = current_unit.get("remediation_guides", {})
-        st.caption(f"共 {len(questions)} 道生活化概念練習，了解自己掌握了哪些重點！")
+        total_pool_count = len(current_unit.get("practice_questions", []))
+
+        st.caption(f"🎲 本次已為您從題庫池（共 {total_pool_count} 題）隨機精選 {len(questions)} 道生活化概念練習！題序與選項皆隨機安排，每次測驗皆為全新挑戰！")
 
         if not questions:
             st.info("這個單元暫無練習題，請直接閱讀重點喔！")
@@ -1033,7 +1045,7 @@ if is_student_ready:
                     user_choices[i] = st.radio(
                         f"選擇第 {i+1} 題答案",
                         q.get("options", []),
-                        key=f"p_q_{current_unit['id']}_{i}",
+                        key=f"p_q_{unit_id}_{current_round}_{i}",
                         label_visibility="collapsed"
                     )
                     st.markdown("---")
@@ -1135,9 +1147,11 @@ if is_student_ready:
                         st.markdown(f"**正確解答**：`{correct_option}`")
                         st.markdown(f"💡 **解說**：{q.get('explanation','')}")
 
-                if st.button("🔄 重新小試身手"):
+                if st.button("🔄 重新小試身手（隨機新題目與新選項）"):
                     st.session_state.practice_submitted = False
                     st.session_state.practice_answers = {}
+                    st.session_state[round_key] = st.session_state.get(round_key, 0) + 1
+                    st.session_state[qs_key] = unit_manager.randomize_practice_questions(current_unit, num_questions=8)
                     st.rerun()
 
     # ──────────────────────────────────────────────
@@ -1250,26 +1264,47 @@ elif is_teacher_ready:
     # ──────────────────────────────────────────────
     with t_tab1:
         st.markdown("### 📚 教材單元管理")
-        st.caption("教師只需輸入名稱與貼上課本內容，系統將自動萃取重點、整理白話內容、建立生活案例、題目與補救說明。")
+        st.caption("教師可直接上傳教材檔案（.docx、.pdf、.txt、.md）或貼上課本內容，系統將自動萃取重點、整理白話內容、建立 4 則生活案例、隨機題庫與補救說明。")
 
         # ➕ 新增教材區
-        with st.expander("➕ 新增學習單元 (點擊展開新增)", expanded=False):
+        with st.expander("➕ 新增學習單元 (支援直接上傳檔案或文字輸入)", expanded=False):
+            st.markdown("#### 📁 方式一：直接上傳教材檔案（推薦）")
+            uploaded_file = st.file_uploader(
+                "選擇或拖曳教材檔案（支援 .docx, .pdf, .txt, .md）",
+                type=["docx", "pdf", "txt", "md"],
+                key="new_unit_file_uploader",
+                help="系統會自動讀取檔案文字，並自動填入下方單元名稱與內容！"
+            )
+
+            # 若有上傳檔案，自動萃取並快取到 session_state
+            if uploaded_file is not None:
+                file_sig = f"{uploaded_file.name}_{uploaded_file.size}"
+                if st.session_state.get("last_uploaded_file_sig") != file_sig:
+                    s_title, s_text = unit_manager.extract_text_from_file_upload(uploaded_file)
+                    st.session_state["last_uploaded_file_sig"] = file_sig
+                    st.session_state["cached_upload_title"] = s_title
+                    st.session_state["cached_upload_text"] = s_text
+                    st.success(f"✅ 已成功從檔案【{uploaded_file.name}】讀取 {len(s_text)} 字！已自動帶入下方表單，您可以直接建立或微調內容。")
+
+            st.markdown("#### ✍️ 方式二：檢閱內容或手動貼上教材文字")
             with st.form("new_unit_form"):
-                st.markdown("#### 步驟 1：輸入單元名稱")
-                new_title = st.text_input("單元名稱", placeholder="例如：第3課：政府的組織與職權")
-                
-                st.markdown("#### 步驟 2：貼上教材內容")
-                new_content = st.text_area("課本教材內容", placeholder="請直接貼上課本段落、講義文字或重點內容...", height=220)
-                
-                st.markdown("#### 步驟 3：按下按鈕")
+                default_title = st.session_state.get("cached_upload_title", "")
+                default_content = st.session_state.get("cached_upload_text", "")
+
+                new_title = st.text_input("單元名稱", value=default_title, placeholder="例如：第3課：政府的組織與職權")
+                new_content = st.text_area("課本教材內容", value=default_content, placeholder="請直接貼上課本段落、講義文字，或透過上方按鈕直接上傳檔案...", height=220)
+
                 submit_create = st.form_submit_button("🚀 建立學習單元", type="primary")
-                
+
                 if submit_create:
                     if not new_title.strip() or not new_content.strip():
-                        st.warning("請填寫單元名稱與教材內容喔！")
+                        st.warning("請填寫單元名稱與教材內容（或透過上方上傳教材檔案）喔！")
                     else:
-                        with st.spinner("🤖 AI 正在分析教材、萃取重點、建立生活案例與練習題..."):
+                        with st.spinner("🤖 AI 正在分析教材、萃取重點、建立 4 則生活案例與題庫..."):
                             created = unit_manager.create_unit(new_title.strip(), new_content.strip())
+                            st.session_state.pop("cached_upload_title", None)
+                            st.session_state.pop("cached_upload_text", None)
+                            st.session_state.pop("last_uploaded_file_sig", None)
                             st.success(f"🎉 成功建立學習單元【{created['title']}】！已直接發布供學生使用。")
                             st.rerun()
 
@@ -1294,7 +1329,7 @@ elif is_teacher_ready:
                             <span style="font-size: var(--fluid-sub); color: #94a3b8;">更新時間：{u.get('updated_at', u.get('created_at',''))}</span>
                         </div>
                         <p style="margin-top: 0.5rem; color: #cbd5e1;">
-                            <b>📌 萃取重點：</b>{len(u_kps)} 條 ｜ <b>✏️ 小試身手：</b>{len(u_qs)} 題 ｜ <b>🏫 生活案例：</b>{len(u.get('life_cases',[]))} 個
+                            <b>📌 萃取重點：</b>{len(u_kps)} 條 ｜ <b>✏️ 小試身手題庫：</b>{len(u_qs)} 題 ｜ <b>🏫 生活案例：</b>{len(u.get('life_cases',[]))} 個
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1319,7 +1354,10 @@ elif is_teacher_ready:
                             st.markdown(f"- {p}")
                         st.markdown(f"##### 🌟 白話整理內容：")
                         st.markdown(u.get("easy_content", ""))
-                        st.markdown(f"##### ✏️ 小試身手練習題 ({len(u_qs)} 題)：")
+                        st.markdown(f"##### 🏫 生活案例 ({len(u.get('life_cases',[]))} 則)：")
+                        for lc in u.get("life_cases", []):
+                            st.markdown(f"- **{lc.get('title','情境實例')}**：{lc.get('story','')}")
+                        st.markdown(f"##### ✏️ 小試身手練習題庫 ({len(u_qs)} 題，學生端每次隨機精選 8 題)：")
                         for idx, q in enumerate(u_qs):
                             st.markdown(f"**第 {idx+1} 題【{q.get('concept_tag','')}】**：{q.get('question','')}")
                             st.caption(f"選項：{', '.join(q.get('options',[]))}｜正確答案：選項 {q.get('correct_index',0)+1}")
@@ -1327,14 +1365,35 @@ elif is_teacher_ready:
 
                     # 修改教材展開
                     if st.session_state.get(f"show_edit_{u_id}", False):
+                        st.markdown("##### 📂 上傳新檔案替換教材內容（選填）：")
+                        edit_file = st.file_uploader(
+                            "選擇新檔案替換內容 (.docx, .pdf, .txt, .md)",
+                            type=["docx", "pdf", "txt", "md"],
+                            key=f"edit_file_upload_{u_id}"
+                        )
+                        if edit_file is not None:
+                            e_sig = f"{edit_file.name}_{edit_file.size}"
+                            if st.session_state.get(f"edit_sig_{u_id}") != e_sig:
+                                e_title, e_text = unit_manager.extract_text_from_file_upload(edit_file)
+                                st.session_state[f"edit_sig_{u_id}"] = e_sig
+                                st.session_state[f"edit_title_{u_id}"] = e_title
+                                st.session_state[f"edit_text_{u_id}"] = e_text
+                                st.info(f"✅ 已成功從檔案【{edit_file.name}】讀取 {len(e_text)} 字，已自動更新下方欄位！")
+
+                        curr_t = st.session_state.get(f"edit_title_{u_id}", u_title)
+                        curr_c = st.session_state.get(f"edit_text_{u_id}", u.get("raw_content", ""))
+
                         with st.form(f"edit_form_{u_id}"):
-                            edit_t = st.text_input("修改單元名稱", value=u_title)
-                            edit_c = st.text_area("修改教材內容", value=u.get("raw_content",""), height=180)
-                            regen = st.checkbox("🔄 是否由 AI 重新自動生成重點、案例與題目？", value=False)
+                            edit_t = st.text_input("修改單元名稱", value=curr_t)
+                            edit_c = st.text_area("修改教材內容", value=curr_c, height=180)
+                            regen = st.checkbox("🔄 是否由 AI 重新自動生成重點、4 則生活案例與隨機題庫？", value=False)
                             save_edit = st.form_submit_button("💾 儲存修改", type="primary")
                             if save_edit:
                                 unit_manager.update_unit(u_id, edit_t, edit_c, regenerate=regen)
                                 st.session_state[f"show_edit_{u_id}"] = False
+                                st.session_state.pop(f"edit_sig_{u_id}", None)
+                                st.session_state.pop(f"edit_title_{u_id}", None)
+                                st.session_state.pop(f"edit_text_{u_id}", None)
                                 st.success("已更新單元內容！")
                                 st.rerun()
 
@@ -1486,8 +1545,8 @@ else:
                 <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">輕鬆看懂核心重點，直式心智圖清晰免橫滑。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
-                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.18rem; font-weight: 700;">✏️ 8 題素養情境小試身手</h4>
-                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">生活情境無壓力練習，錯題即享白話充電與避坑口訣。</p>
+                <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.18rem; font-weight: 700;">✏️ 素養情境隨機小試身手</h4>
+                <p style="color: #cbd5e1; font-size: var(--fluid-body); margin: 0; line-height: 1.6;">生活情境無壓力練習，每次隨機抽題與洗牌選項，錯題即享白話充電與避坑口訣。</p>
             </div>
             <div class="feature-card" style="margin-bottom: 0; padding: 1.1rem 1.3rem;">
                 <h4 style="color: #95c6f4; margin: 0 0 0.35rem 0; font-size: 1.18rem; font-weight: 700;">💬 公民 AI 助教隨身問</h4>
