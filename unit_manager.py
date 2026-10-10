@@ -11,6 +11,8 @@ from google.genai import types
 from dotenv import load_dotenv
 import docx
 import pdfplumber
+import struct
+import olefile
 
 load_dotenv()
 
@@ -85,9 +87,100 @@ def extract_json(text):
 
     return None
 
+def extract_text_from_doc_bytes(file_bytes):
+    """
+    Parses legacy Word 97-2003 (.doc) binary file using pure Python olefile.
+    Supports FIB Clx Piece Table parsing with fallback to raw stream extraction.
+    """
+    bio = io.BytesIO(file_bytes)
+    if not olefile.isOleFile(bio):
+        try:
+            return file_bytes.decode('utf-8')
+        except Exception:
+            return file_bytes.decode('cp950', errors='ignore')
+
+    try:
+        ole = olefile.OleFileIO(bio)
+        if not ole.exists('WordDocument'):
+            return ""
+
+        word_stream = ole.openstream('WordDocument').read()
+        if len(word_stream) < 512:
+            return ""
+
+        flags = struct.unpack('<H', word_stream[0x000A:0x000C])[0]
+        fWhichTblStm = (flags & 0x0200) != 0
+        table_stm_name = '1Table' if fWhichTblStm else '0Table'
+
+        if not ole.exists(table_stm_name):
+            return _extract_raw_text_from_stream(word_stream)
+
+        table_stream = ole.openstream(table_stm_name).read()
+        fcClx, lcbClx = struct.unpack('<II', word_stream[418:426])
+
+        if fcClx + lcbClx > len(table_stream):
+            return _extract_raw_text_from_stream(word_stream)
+
+        clx_data = table_stream[fcClx:fcClx + lcbClx]
+        pos = 0
+        while pos < len(clx_data) and clx_data[pos] == 1:
+            cbGrpprl = struct.unpack('<H', clx_data[pos+1:pos+3])[0]
+            pos += 3 + cbGrpprl
+
+        if pos < len(clx_data) and clx_data[pos] == 2:
+            lcb = struct.unpack('<I', clx_data[pos+1:pos+5])[0]
+            pos += 5
+            plcfpcd = clx_data[pos:pos+lcb]
+            n = (lcb - 4) // 12
+            cps = [struct.unpack('<I', plcfpcd[i*4:(i+1)*4])[0] for i in range(n+1)]
+            pcds = plcfpcd[(n+1)*4:]
+
+            full_text = []
+            for i in range(n):
+                pcd = pcds[i*8:(i+1)*8]
+                fc = struct.unpack('<I', pcd[2:6])[0]
+                fCompressed = (fc & 0x40000000) != 0
+                actual_fc = (fc & ~0x40000000)
+                char_count = cps[i+1] - cps[i]
+
+                if fCompressed:
+                    actual_fc = actual_fc // 2
+                    piece_bytes = word_stream[actual_fc : actual_fc + char_count]
+                    try:
+                        txt = piece_bytes.decode('cp950')
+                    except Exception:
+                        txt = piece_bytes.decode('latin1', errors='ignore')
+                else:
+                    piece_bytes = word_stream[actual_fc : actual_fc + char_count * 2]
+                    txt = piece_bytes.decode('utf-16-le', errors='ignore')
+
+                full_text.append(txt)
+
+            result_text = ''.join(full_text)
+            result_text = result_text.replace('\r\n', '\n').replace('\r', '\n').replace('\x07', '\t').replace('\x0c', '\n')
+            result_text = re.sub(r'[\x00-\x08\x0b\x0e-\x1f]', '', result_text)
+            return result_text.strip()
+        else:
+            return _extract_raw_text_from_stream(word_stream)
+    except Exception as e:
+        print(f"[Warning] OLE doc 解析異常: {e}")
+        return _extract_raw_text_from_stream(word_stream if 'word_stream' in locals() else file_bytes)
+
+def _extract_raw_text_from_stream(stream_bytes):
+    """備援：自二進位流中提取連續可讀文字"""
+    utf16 = stream_bytes.decode('utf-16-le', errors='ignore')
+    clean16 = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ufffd]', '', utf16)
+    lines16 = [l.strip() for l in clean16.splitlines() if len(l.strip()) > 3]
+    if len(lines16) > 5:
+        return '\n'.join(lines16)
+    cp950 = stream_bytes.decode('cp950', errors='ignore')
+    clean950 = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ufffd]', '', cp950)
+    lines950 = [l.strip() for l in clean950.splitlines() if len(l.strip()) > 3]
+    return '\n'.join(lines950)
+
 def extract_text_from_file_upload(file_input, filename=""):
     """
-    Extracts text from uploaded file (supports .docx, .pdf, .txt, .md).
+    Extracts text from uploaded file (supports .docx, .doc, .pdf, .txt, .md).
     file_input can be bytes or a file-like buffer (e.g. Streamlit UploadedFile).
     Returns (suggested_title, extracted_text).
     """
@@ -118,6 +211,8 @@ def extract_text_from_file_upload(file_input, filename=""):
         if ext == 'docx':
             doc = docx.Document(io.BytesIO(file_bytes))
             extracted_text = '\n'.join([p.text.strip() for p in doc.paragraphs if p.text.strip()])
+        elif ext == 'doc':
+            extracted_text = extract_text_from_doc_bytes(file_bytes)
         elif ext == 'pdf':
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
                 pages_text = []

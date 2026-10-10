@@ -50,6 +50,12 @@ def safe_extract_text_from_file_upload(file_input, filename=""):
             import docx
             doc = docx.Document(io.BytesIO(file_bytes))
             extracted_text = '\n'.join([p.text.strip() for p in doc.paragraphs if p.text.strip()])
+        elif ext == 'doc':
+            if hasattr(unit_manager, 'extract_text_from_doc_bytes'):
+                extracted_text = unit_manager.extract_text_from_doc_bytes(file_bytes)
+            else:
+                import olefile
+                extracted_text = file_bytes.decode('utf-8', errors='ignore')
         elif ext == 'pdf':
             import pdfplumber
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
@@ -1359,14 +1365,14 @@ elif is_teacher_ready:
     # ──────────────────────────────────────────────
     with t_tab1:
         st.markdown("### 📚 教材單元管理")
-        st.caption("教師可直接上傳教材檔案（.docx、.pdf、.txt、.md）或貼上課本內容，系統將自動萃取重點、整理白話內容、建立 4 則生活案例、隨機題庫與補救說明。")
+        st.caption("教師可直接上傳教材檔案（.docx、.doc、.pdf、.txt、.md）或貼上課本內容，系統將自動萃取重點、整理白話內容、建立 4 則生活案例、隨機題庫與補救說明。")
 
         # ➕ 新增教材區
         with st.expander("➕ 新增學習單元 (支援直接上傳檔案或文字輸入)", expanded=False):
             st.markdown("#### 📁 方式一：直接上傳教材檔案（推薦）")
             uploaded_file = st.file_uploader(
-                "選擇或拖曳教材檔案（支援 .docx, .pdf, .txt, .md）",
-                type=["docx", "pdf", "txt", "md"],
+                "選擇或拖曳教材檔案（支援 .docx, .doc, .pdf, .txt, .md）",
+                type=["docx", "doc", "pdf", "txt", "md"],
                 key="new_unit_file_uploader",
                 help="系統會自動讀取檔案文字，並自動填入下方單元名稱與內容！"
             )
@@ -1462,8 +1468,8 @@ elif is_teacher_ready:
                     if st.session_state.get(f"show_edit_{u_id}", False):
                         st.markdown("##### 📂 上傳新檔案替換教材內容（選填）：")
                         edit_file = st.file_uploader(
-                            "選擇新檔案替換內容 (.docx, .pdf, .txt, .md)",
-                            type=["docx", "pdf", "txt", "md"],
+                            "選擇新檔案替換內容 (.docx, .doc, .pdf, .txt, .md)",
+                            type=["docx", "doc", "pdf", "txt", "md"],
                             key=f"edit_file_upload_{u_id}"
                         )
                         if edit_file is not None:

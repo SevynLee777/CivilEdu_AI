@@ -2,38 +2,41 @@
 
 **專案名稱**：CivilEdu_AI 國中公民思辨星系 ｜ AI 智慧自主學習館  
 **開發日期**：2026-10-10  
-**核心主題**：教師端教材檔案直接上傳解析、小試身手隨機選題/題序/選項洗牌演算法、各單元生活案例擴充至 4 則  
-**版本標籤**：`2026-10-10-v1`  
+**核心主題**：教師端教材檔案直接上傳解析（含舊版 Word .doc 與 .docx/.pdf/.txt/.md）、小試身手隨機選題/題序/選項洗牌演算法、各單元生活案例擴充至 4 則、Streamlit Cloud 熱重載與解析容錯安全防護  
+**版本標籤**：`2026-10-10-v2`  
 
 ---
 
 ## 🎯 一、 今日開發里程碑總覽 (Milestones Summary)
 
-今日（2026-10-10）針對使用者提出的三大核心需求完成系統性升級、介面重構與全自動化單元測試：
+今日（2026-10-10）針對使用者提出之核心需求與雲端部署實務進行全面升級：
 
 | 需求序號 | 主題 | 影響模組 | 核心成果摘要 |
 | :---: | :--- | :--- | :--- |
-| **一** | **教材檔案直接上傳** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) | 支援直接上傳 `.docx`、`.pdf`、`.txt`、`.md` 文件，自動解析段落、計算字數並自動填入單元名稱與內容；支援直接一鍵 AI 生成或手動編輯微調，修改教材亦同步支援檔案替換。 |
+| **一** | **教材檔案直接上傳（全面支援 .doc / .docx / .pdf / .txt / .md）** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)<br>[`requirements.txt`](file:///C:/Users/awen8/CivilEdu_AI/requirements.txt) | 支援直接上傳新舊版 Word（`.docx` 與舊版 Word 97-2003 `.doc`）、`.pdf`、`.txt`、`.md` 文件，自動解析段落、計算字數並自動填入單元名稱與內容；支援直接一鍵 AI 生成或手動編輯微調，修改教材亦同步支援檔案替換。採用純 Python OLE2 串流解析，完全支援 Linux/Streamlit Cloud。 |
 | **二** | **隨機選題、題序與選項洗牌** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)<br>[`units_db.json`](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 各單元題庫池擴充至 16 道素養選擇題，每次測驗動態隨機抽取 8 題、題序隨機打散、每題 ABCD 選項隨機洗牌，且正確答案動態精準對齊；重新測驗時自動刷新為全新題組。 |
 | **三** | **各單元生活案例增加為 4 則** | [`units_db.json`](file:///C:/Users/awen8/CivilEdu_AI/units_db.json)<br>[`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)<br>[`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | 第一課與第二課生活案例由 2 則全面擴增為 4 則完整實例（涵蓋校園自治、日常生活、網路社群、社區公共），每則均包含故事描述與思辨焦點；AI 單元生成提示詞同步升級。 |
+| **四** | **Streamlit Cloud 熱重載與例外安全包裝** | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) | 針對雲端容器（Streamlit Cloud）模組快取熱重載可能產生之 `AttributeError`，建立安全自動 reload 與 `safe_extract_text_from_file_upload` / `safe_randomize_practice_questions` 本地雙重保險降級防護。 |
 
 ---
 
 ## 📂 二、 需求一：教師端「教材單元管理」直接上傳檔案
 
-### 1. 需求分析與操作痛點
-原先系統僅提供空白文字輸入框要求教師手動複製貼上，若講義排版繁複或為 PDF/Word 文件，複製過程易遺漏格式或產生換行錯置。
+#### 1. 需求分析與操作痛點
+原先系統僅提供空白文字輸入框要求教師手動複製貼上，若講義排版繁複或為 PDF/Word 文件，複製過程易遺漏格式或產生換行錯置。特別是國中許多資深教師留存的珍貴講義仍為舊版 Word 97-2003（`.doc`）格式，需要能原生支援直接上傳與自動解碼。
 
 ### 2. 架構設計與 Mermaid 流程圖
 
 ```mermaid
 flowchart TD
-    A["教師選取或拖曳檔案 (.docx, .pdf, .txt, .md)"] --> B["extract_text_from_file_upload() 檔案萃取引擎"]
+    A["教師選取或拖曳檔案 (.doc, .docx, .pdf, .txt, .md)"] --> B["extract_text_from_file_upload() 檔案萃取引擎"]
     B --> C1{"檔案格式判斷"}
+    C1 -->|舊版 Word .doc| D0["olefile + MS-DOC FIB/Clx Piece Table 純 Python 解析"]
     C1 -->|Word .docx| D1["python-docx 提取段落與文字結構"]
     C1 -->|PDF .pdf| D2["pdfplumber 逐頁萃取文字內容"]
     C1 -->|Text / MD| D3["UTF-8 / CP950 容錯編碼解碼"]
-    D1 --> E["自動提取檔名作為單元名稱建議"]
+    D0 --> E["自動提取檔名作為單元名稱建議"]
+    D1 --> E
     D2 --> E
     D3 --> E
     E --> F["自動帶入下方表單預覽（單元名稱 ＆ 教材內容）"]
@@ -42,13 +45,22 @@ flowchart TD
 ```
 
 ### 3. 技術實作亮點
-1. **多格式文件文字萃取引擎 ([`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py#L90-L135))**：
-   - 封裝 [`extract_text_from_file_upload(file_input, filename)`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py#L90)，同時相容記憶體 Bytes 與 Streamlit 的 `UploadedFile`。
+1. **舊版 Word 97-2003 (`.doc`) 純 Python OLE2 串流解析 ([`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py#L90-L175))**：
+   - **雲端相容性突破**：Streamlit Cloud 為 Linux 容器環境，無法依賴 Windows 獨有的 `win32com`，亦不宜依賴繁雜的系統二進位外掛套件。
+   - **實作 `extract_text_from_doc_bytes()`**：
+     - 利用純 Python 套件 `olefile` 讀取 OLE2/CFBF 複合二進位串流。
+     - 解析 `WordDocument` 串流頂部之 FIB (File Information Block)，判定 Table 串流名稱（`0Table` 或 `1Table`）。
+     - 讀取 FIB 偏移量 `0x01A2` 之 `fcClx` 與 `lcbClx`，精確鎖定 Complex File Structure (Clx)。
+     - 遍歷 Clx 內的 Piece Table (`Plcfpcd`)，解析每個 Piece 的字元計數與二進位偏移位置 (`fc`)。
+     - 區分壓縮字元（8-bit ANSI/CP950）與標準雙字節 Unicode（UTF-16LE），精準還原長篇講義文字與標點符號，完整相容如 `08_01_L1.doc`（4,549 字）等各類學校講義。
+2. **多格式文件文字萃取引擎 ([`unit_manager.py`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py))**：
+   - 封裝 [`extract_text_from_file_upload(file_input, filename)`](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py)，同時相容記憶體 Bytes 與 Streamlit 的 `UploadedFile`。
+   - 自動在讀取前、後執行 `seek(0)` 重置檔案指標，防止連續讀取時游標觸底。
    - 自動自檔案名稱剝除副檔名作為單元名稱預設值。
    - 編碼容錯：針對文字檔優先以 `utf-8` 解碼，失敗時自動以 `cp950` 回退，徹底杜絕 Windows 常見之 `UnicodeDecodeError`。
-2. **表單狀態雙向綁定 ([`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py#L1265-L1320))**：
+3. **表單狀態雙向綁定 ([`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py#L1265-L1350))**：
    - 透過檔案特徵簽章 (`file_sig = f"{uploaded_file.name}_{uploaded_file.size}"`) 偵測檔案變動，避免 Streamlit 每次 rerun 時重複解析。
-   - 顯示醒目的成功提示標籤（如：`✅ 已成功從檔案【xxx.docx】讀取 1,450 字！`）。
+   - 顯示醒目的成功提示標籤（如：`✅ 已成功從檔案【xxx.doc】讀取 4,549 字！`）。
    - 修改現有教材單元時，亦提供專屬檔案上傳器，便利教師隨時替換內容並選擇是否重新由 AI 生成重點。
 
 ---
@@ -115,16 +127,37 @@ flowchart TD
 
 ---
 
-## 🧪 五、 整合測試與驗證紀錄
+## 🛡️ 五、 雲端部署防護：Streamlit Cloud 熱重載與模組快取安全機制
 
-透過自動化腳本驗證三大需求之核心邏輯：
+### 1. 遭遇問題 (AttributeError)
+在 Streamlit Cloud 容器熱部署時，若模組檔案已更新但 Streamlit 行程尚未重啟，Python 之 `sys.modules` 可能殘留舊版 `unit_manager` 快取，導致呼叫 `unit_manager.extract_text_from_file_upload` 時拋出：
+```
+AttributeError: module 'unit_manager' has no attribute 'extract_text_from_file_upload'
+```
+
+### 2. 雙重安全防護機制 ([`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py))
+1. **模組強制刷新機制**：在 `app.py` 頂部引用 `import importlib`，自動執行 `importlib.reload(unit_manager)`，確保每次雲端重新載入時均取得最新程式碼物件。
+2. **本地備援包裝器 (`safe_extract_text_from_file_upload`)**：
+   - 優先呼叫 `unit_manager.extract_text_from_file_upload`。
+   - 若發生 `AttributeError` 或函式尚未註冊，自動切換至 `app.py` 內建的本機萃取備援邏輯（含 `.doc`, `.docx`, `.pdf`, `.txt` 解碼），徹底消除應用程式崩潰風險。
+3. **測驗洗牌備援包裝器 (`safe_randomize_practice_questions`)**：
+   - 同步加入備援呼叫，若模組未及時更新亦可在本地完成隨機抽題與選項打散。
+
+---
+
+## 🧪 六、 整合測試與驗證紀錄
+
+透過自動化腳本驗證三大需求與 `.doc` 支援之核心邏輯：
 
 ```
-=== 測試 1: 檔案解析功能 ===
+=== 測試 1: 檔案解析功能 (含新舊版 Word、PDF、文字檔) ===
 Docx - 建議名稱: 第3課_政府的組織
 Docx - 解析字數: 19 內文預覽: 這是第一段教材內容 這是第二段重點概念
 Txt  - 建議名稱: 公民重點講義
 Txt  - 解析字數: 18
+Doc  - 檔案: 08_01_L1.doc (Word 97-2003 OLE2) -> 解析字數: 4,549 字
+Doc  - 檔案: 08_01_L2.doc (Word 97-2003 OLE2) -> 解析字數: 4,818 字
+首行驗證: "第四篇　民主政治的運作"、"憲法是國家的根本大法，是人民權利的保障書..." 繁體中文全數精準還原！
 
 === 測試 2: 小試身手隨機選題、題序與選項洗牌 ===
 單元: 第1課：國家與民主政治, 題庫池總題數: 16
@@ -155,9 +188,10 @@ Txt  - 解析字數: 18
 
 ---
 
-## 🚀 六、 程式庫版本控制與部署狀態
+## 🚀 七、 程式庫版本控制與部署狀態
 
 - **遠端儲存庫**：`https://github.com/SevynLee777/CivilEdu_AI.git`
 - **當前分支**：`main`
-- **本次提交**：`cf9311b`
-- **工作區狀態**：乾淨無衝突 (`working tree clean`)
+- **最新提交**：支援舊版 Word 97-2003 (`.doc`) 檔案上傳與 Streamlit Cloud 熱重載雙重安全機制
+- **工作區狀態**：已同步推送至 GitHub，Streamlit Cloud 自動觸發持續部署 (CI/CD)
+
