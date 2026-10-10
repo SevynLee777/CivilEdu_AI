@@ -232,10 +232,10 @@
   * **回復經典頁籤外觀**：移除過度卡片化的厚外框與浮動方塊感，還原經典膠囊標籤頁（`border-radius: 999px`）、共有水平基線（`border-bottom: 1.5px solid var(--galaxy-line)`）與選中時的琥珀金底線指標（`border-bottom: 3px solid var(--galaxy-amber)`），保持標籤列整體連貫性。
   * **純粹字級加大**：標籤字級設定為 `clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem)`（約 19px ～ 22px），字重為 600（未選）/ 700（選中），精準覆蓋 Streamlit 1.59+ `@react-aria/tabs` 之 `[data-testid="stTab"]` 與 `.react-aria-Tab`，清晰易讀且不過度膨脹。
   * **還原導覽卡片與章節標題**：首頁特色功能導覽卡片還原原版標題與簡潔排版（`📖 白話重點 ＆ 直式心智圖` 等），內頁章節標題還原為 `###`，風格清爽聚焦。
-* **階段 24：系統全面分析、完整網站流程圖（Mermaid Chart）與 README.md 全新重構（2026-10-04）**：
-  * **架構與業務流程全面梳理**：詳細分析未就緒、學生端、教師端 3 大權限邊界，以及 4 條件啟航防禦與四大核心學習分頁。
-  * **Mermaid 流程設計圖標準化**：產出 100% 相容 Mermaid Chart 與 GitHub Markdown 之流程圖（涵蓋 Entry, Guard, Teacher, Student, DataStorage 五大模組）。
-  * **專案手冊重構**：更新 [`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md)，包含最新系統架構、Mermaid 流程圖、技術堆疊與啟動指引。
+* **階段 25：教師端教材檔案上傳支援、小試身手隨機選題/題序/選項洗牌、各單元生活案例擴增至 4 則（2026-10-10）**：
+  * **教師端教材檔案直接上傳**：原生支援直接上傳 `.docx`、`.pdf`、`.txt`、`.md` 檔案，自動解析段落與文字內容，自動推薦單元名稱並帶入表單預覽，保留教師微調或直接一鍵 AI 建立能力；修改教材亦同步支援檔案替換。
+  * **小試身手隨機選題與選項洗牌**：各單元題庫池全面擴充至 16 道素養單選題，每次作答由題庫池隨機抽選 8 題、題序隨機打散、每題 ABCD 選項隨機洗牌，且正確答案動態精準對齊；重新測驗時自動刷新為全新題組。
+  * **各單元生活案例增加為 4 則**：第一課與第二課生活案例由原本 2 則全面擴充為 4 則完整實例（涵蓋校園自治、日常生活、網路社群、社區公共），每則均包含故事描述與思辨焦點；AI 生成單元提示詞同步升級。
 
 ---
 
@@ -244,9 +244,9 @@
 | 檔案/資料夾名稱 | 類型 | 說明 |
 | :--- | :--- | :--- |
 | [app.py](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | Streamlit 介面（公民思辨星系版，學生端/教師端雙獨立流程） |
-| [unit_manager.py](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) | 核心模組 | 學習單元管理、AI 自動分析與生成重點、案例、題目與補救 |
+| [unit_manager.py](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) | 核心模組 | 學習單元管理、檔案解析、隨機抽題、AI 自動分析與生成重點/案例/題目/補救 |
 | [logger_utils.py](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成 |
-| [units_db.json](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、案例、題目、心智圖） |
+| [units_db.json](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、4 則生活案例、16 題題庫池、心智圖） |
 | [config.json](file:///C:/Users/awen8/CivilEdu_AI/config.json) | 設定檔 | 設定國中八年級公民科目名稱與 AI 助教角色 |
 | [student_logs/](file:///C:/Users/awen8/CivilEdu_AI/student_logs) | 資料夾 | 學生個人學習歷程 JSON 日誌 |
 | [DEVELOPMENT_LOG_20260830.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260830.md) | 文件 | 2026-08-30 本日開發紀錄檔 |
@@ -254,6 +254,7 @@
 | [DEVELOPMENT_LOG_20260930.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20260930.md) | 文件 | 2026-09-30 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20261003.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261003.md) | 文件 | 2026-10-03 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20261004.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 文件 | 2026-10-04 本日完整開發紀錄檔（階段 19～24） |
+| [DEVELOPMENT_LOG_20261010.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261010.md) | 文件 | 2026-10-10 本日完整開發紀錄檔（階段 25） |
 | [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程主紀錄檔 |
 | [README.md](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 文件 | 專案說明文件（含系統分析與 Mermaid 網站流程圖） |
 
@@ -261,5 +262,5 @@
 
 ## 🎯 四、 維護與操作指引
 1. **本地啟動**：執行 `python -m streamlit run app.py` 或點擊 `run.bat`。
-2. **教師建立單元**：切換至教師端 ➔ 點開「➕ 新增學習單元」 ➔ 貼上內容並點擊「🚀 建立學習單元」。
-3. **學生學習**：切換至學生端 ➔ 選擇班級座號 ➔ 選擇單元開始學習與小試身手。
+2. **教師建立單元**：切換至教師端 ➔ 點開「➕ 新增學習單元」 ➔ 直接上傳教材檔案或貼上內容 ➔ 點擊「🚀 建立學習單元」。
+3. **學生學習**：切換至學生端 ➔ 選擇班級座號 ➔ 選擇單元開始學習與隨機小試身手。
