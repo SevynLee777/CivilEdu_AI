@@ -1,12 +1,107 @@
 import streamlit as st
+import importlib
 import unit_manager
 import logger_utils
 import data_loader
 import os
+import io
 import json
 import html
 import re
+import random
+import copy
 from dotenv import load_dotenv
+
+# 強制重載自訂模組，徹底解決 Streamlit Cloud 熱重載時使用舊模組快取問題
+try:
+    importlib.reload(unit_manager)
+except Exception:
+    pass
+
+def safe_extract_text_from_file_upload(file_input, filename=""):
+    """安全解析上傳檔案文字，優先呼叫 unit_manager，若遇模組快取延遲則以本地備援執行"""
+    if hasattr(unit_manager, 'extract_text_from_file_upload'):
+        try:
+            return unit_manager.extract_text_from_file_upload(file_input, filename)
+        except Exception as e:
+            print(f"[Warning] unit_manager.extract_text_from_file_upload 調用異常: {e}")
+
+    # 本地備援實作 (相容 Streamlit UploadedFile 與 BytesIO)
+    if hasattr(file_input, 'name') and not filename:
+        filename = file_input.name
+    if hasattr(file_input, 'seek'):
+        try: file_input.seek(0)
+        except Exception: pass
+    if hasattr(file_input, 'read'):
+        file_bytes = file_input.read()
+    elif isinstance(file_input, bytes):
+        file_bytes = file_input
+    else:
+        file_bytes = bytes(file_input)
+    if hasattr(file_input, 'seek'):
+        try: file_input.seek(0)
+        except Exception: pass
+
+    base_name = re.sub(r'\.[^.]+$', '', filename).strip() if filename else "新學習單元"
+    ext = filename.split('.')[-1].lower() if '.' in filename else ''
+    extracted_text = ""
+    try:
+        if ext == 'docx':
+            import docx
+            doc = docx.Document(io.BytesIO(file_bytes))
+            extracted_text = '\n'.join([p.text.strip() for p in doc.paragraphs if p.text.strip()])
+        elif ext == 'pdf':
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                pages_text = [page.extract_text().strip() for page in pdf.pages if page.extract_text()]
+                extracted_text = '\n\n'.join(pages_text)
+        elif ext in ['txt', 'md']:
+            try:
+                extracted_text = file_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                extracted_text = file_bytes.decode('cp950', errors='ignore')
+        else:
+            try:
+                extracted_text = file_bytes.decode('utf-8')
+            except Exception:
+                extracted_text = file_bytes.decode('cp950', errors='ignore')
+    except Exception as e:
+        print(f"[Warning] 本地檔案解析異常: {e}")
+        try:
+            extracted_text = file_bytes.decode('utf-8', errors='ignore')
+        except Exception:
+            extracted_text = ""
+    return base_name, extracted_text.strip()
+
+def safe_randomize_practice_questions(unit, num_questions=8):
+    """安全抽取練習題目與洗牌選項，優先呼叫 unit_manager，若遇模組快取延遲則以本地備援執行"""
+    if hasattr(unit_manager, 'randomize_practice_questions'):
+        try:
+            return unit_manager.randomize_practice_questions(unit, num_questions)
+        except Exception as e:
+            print(f"[Warning] unit_manager.randomize_practice_questions 調用異常: {e}")
+
+    # 本地備援實作
+    raw_qs = unit.get("practice_questions", [])
+    if not raw_qs:
+        return []
+    sample_size = min(num_questions, len(raw_qs))
+    selected_qs = random.sample(raw_qs, sample_size)
+    random.shuffle(selected_qs)
+    processed_qs = []
+    for q in selected_qs:
+        q_copy = copy.deepcopy(q)
+        original_options = q_copy.get("options", [])
+        orig_corr_idx = q_copy.get("correct_index", 0)
+        clean_options = [re.sub(r'^[A-Da-d]\s*[\)\.\、\:\-]?\s*', '', str(opt)).strip() for opt in original_options]
+        correct_content = clean_options[orig_corr_idx] if 0 <= orig_corr_idx < len(clean_options) else (clean_options[0] if clean_options else "")
+        random.shuffle(clean_options)
+        new_options = [f"{chr(65 + idx)}) {opt_text}" for idx, opt_text in enumerate(clean_options)]
+        new_corr_idx = clean_options.index(correct_content) if correct_content in clean_options else 0
+        q_copy["options"] = new_options
+        q_copy["correct_index"] = new_corr_idx
+        processed_qs.append(q_copy)
+    return processed_qs
 
 # --- Page Config ---
 st.set_page_config(
@@ -1022,7 +1117,7 @@ if is_student_ready:
 
         # 若尚未隨機選題或為空，則由題庫池隨機抽取 8 題，並洗牌題序與選項
         if qs_key not in st.session_state or not st.session_state[qs_key]:
-            st.session_state[qs_key] = unit_manager.randomize_practice_questions(current_unit, num_questions=8)
+            st.session_state[qs_key] = safe_randomize_practice_questions(current_unit, num_questions=8)
             st.session_state[round_key] = st.session_state.get(round_key, 0) + 1
 
         questions = st.session_state[qs_key]
@@ -1151,7 +1246,7 @@ if is_student_ready:
                     st.session_state.practice_submitted = False
                     st.session_state.practice_answers = {}
                     st.session_state[round_key] = st.session_state.get(round_key, 0) + 1
-                    st.session_state[qs_key] = unit_manager.randomize_practice_questions(current_unit, num_questions=8)
+                    st.session_state[qs_key] = safe_randomize_practice_questions(current_unit, num_questions=8)
                     st.rerun()
 
     # ──────────────────────────────────────────────
@@ -1280,7 +1375,7 @@ elif is_teacher_ready:
             if uploaded_file is not None:
                 file_sig = f"{uploaded_file.name}_{uploaded_file.size}"
                 if st.session_state.get("last_uploaded_file_sig") != file_sig:
-                    s_title, s_text = unit_manager.extract_text_from_file_upload(uploaded_file)
+                    s_title, s_text = safe_extract_text_from_file_upload(uploaded_file)
                     st.session_state["last_uploaded_file_sig"] = file_sig
                     st.session_state["cached_upload_title"] = s_title
                     st.session_state["cached_upload_text"] = s_text
@@ -1374,7 +1469,7 @@ elif is_teacher_ready:
                         if edit_file is not None:
                             e_sig = f"{edit_file.name}_{edit_file.size}"
                             if st.session_state.get(f"edit_sig_{u_id}") != e_sig:
-                                e_title, e_text = unit_manager.extract_text_from_file_upload(edit_file)
+                                e_title, e_text = safe_extract_text_from_file_upload(edit_file)
                                 st.session_state[f"edit_sig_{u_id}"] = e_sig
                                 st.session_state[f"edit_title_{u_id}"] = e_title
                                 st.session_state[f"edit_text_{u_id}"] = e_text

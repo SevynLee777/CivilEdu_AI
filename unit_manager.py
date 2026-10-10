@@ -93,12 +93,22 @@ def extract_text_from_file_upload(file_input, filename=""):
     """
     if hasattr(file_input, 'name') and not filename:
         filename = file_input.name
+    if hasattr(file_input, 'seek'):
+        try:
+            file_input.seek(0)
+        except Exception:
+            pass
     if hasattr(file_input, 'read'):
         file_bytes = file_input.read()
     elif isinstance(file_input, bytes):
         file_bytes = file_input
     else:
         file_bytes = bytes(file_input)
+    if hasattr(file_input, 'seek'):
+        try:
+            file_input.seek(0)
+        except Exception:
+            pass
 
     base_name = re.sub(r'\.[^.]+$', '', filename).strip() if filename else "新學習單元"
     ext = filename.split('.')[-1].lower() if '.' in filename else ''
