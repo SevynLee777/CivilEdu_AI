@@ -26,124 +26,77 @@ $$\text{Ready 門檻} = (\text{身分} == \text{學生}) \land (\text{姓名非�
 
 ---
 
-## 📊 網站完整流程設計圖 (Website Process Flowchart)
+## 📊 網站流程設計圖 (Website Process Flowchart)
 
-以下流程圖完整呈現身分選擇、密碼安全驗證、動態防禦機制、四大模組學習及數據落盤流程：
+為了讓圖表文字清楚易讀，流程圖拆成三張：**① 系統總覽** → **② 學生學習流程** → **③ 教師管理流程**。
+
+### ① 系統總覽
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
+flowchart LR
+    classDef role fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef data fill:#DCFCE7,stroke:#16A34A,color:#14532D;
+    classDef ai fill:#FEF3C7,stroke:#D97706,color:#78350F;
+
+    U([使用者]) --> R{選擇身分}
+    R -->|🎓 學生| S[學生端<br/>四大學習模組]:::role
+    R -->|👨‍🏫 老師| T[教師後台<br/>密碼驗證]:::role
+
+    S -->|讀取教材| D[(教材庫<br/>units_db.json)]:::data
+    S <-->|寫入 / 查詢歷程| L[(學習歷程<br/>student_logs)]:::data
+    T <-->|管理單元| D
+    T -->|全班分析| L
+
+    S -.->|AI 助教問答| G[[Gemini 2.5 Flash]]:::ai
+    T -.->|AI 生成教材| G
+```
+
+### ② 學生學習流程
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
 flowchart TD
-    %% 樣式設定
-    classDef startNode fill:#1E3A8A,stroke:#60A5FA,stroke-width:2px,color:#FFFFFF;
-    classDef decisionNode fill:#312E81,stroke:#F59E0B,stroke-width:2px,color:#FFFFFF;
-    classDef pageNode fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF;
-    classDef actionNode fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#FFFFFF;
-    classDef guardNode fill:#451A03,stroke:#F97316,stroke-width:2px,color:#FFFFFF;
-    classDef dataNode fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#FFFFFF;
+    classDef guard fill:#FFEDD5,stroke:#EA580C,color:#7C2D12;
+    classDef tab fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef data fill:#DCFCE7,stroke:#16A34A,color:#14532D;
+    classDef ai fill:#FEF3C7,stroke:#D97706,color:#78350F;
 
-    subgraph SG_Entry ["🌐 進入系統與身分選擇"]
-        Start(["使用者連線至網站 (app.py)"]):::startNode
-        InitSession["初始化 Session 狀態<br/>(身分=none, 單元=None)"]:::actionNode
-        SelectRole{"左側邊欄選擇身分"}:::decisionNode
+    A[填寫個人資料<br/>選擇學習單元] --> B{資料齊全？}
+    B -->|否| W[航行準備中<br/>提示缺漏項目]:::guard
+    W --> A
+    B -->|是| C[學習儀表板]
 
-        Start --> InitSession
-        InitSession --> SelectRole
-    end
+    C --> T1[📖 開始學習]:::tab
+    C --> T2[✏️ 小試身手]:::tab
+    C --> T3[💬 AI 助教]:::tab
+    C --> T4[🌱 我的足跡]:::tab
 
-    subgraph SG_Guard ["🚀 首頁啟航防禦機制"]
-        ShowDefense["主畫面：航行準備中<br/>• 4步驟即時狀態檢核表<br/>• 四大模組特色導覽卡片"]:::guardNode
-        CheckReady{"檢查啟航防禦條件：<br/>姓名非空 且 已選單元？"}:::decisionNode
-        ResetRole["重置身分至未選擇 (none)"]:::actionNode
+    T1 -->|前往練習| T2
+    T2 --> Q[8 題自動批改<br/>觀念補強]
+    Q -->|寫入| L[(學習歷程<br/>student_logs)]:::data
+    T3 --> G[Gemini<br/>引導式回覆]:::ai
+    T4 -.->|讀取| L
+```
 
-        SelectRole --> |"未選擇 (none)"| ShowDefense
-        ResetRole --> ShowDefense
-        CheckReady --> |"否 (條件未滿足)"| ShowDefense
-    end
+### ③ 教師管理流程
 
-    subgraph SG_Teacher ["👨‍🏫 教師管理後台流程"]
-        CheckTeacherAuth{"是否已驗證密碼？"}:::decisionNode
-        TeacherDialog["彈出密碼驗證視窗<br/>(teacher_auth_dialog)"]:::actionNode
-        CheckPwd{"驗證密碼"}:::decisionNode
-        TeacherVerified["驗證成功<br/>(is_teacher_authenticated=True)"]:::actionNode
-        TeacherDashboard["主畫面：👨‍🏫 教師管理儀表板"]:::pageNode
-        T_Manage["單元管理<br/>(新增/編輯/刪除/AI生成)"]:::actionNode
-        T_Analytics["學生歷程看板<br/>(全班統計/作答率/個別足跡)"]:::actionNode
-        T_Export["報表匯出<br/>(下載 CSV / JSON 報表)"]:::actionNode
-        T_Logout["登出管理端"]:::actionNode
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
+flowchart LR
+    classDef dash fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef guard fill:#FFEDD5,stroke:#EA580C,color:#7C2D12;
 
-        SelectRole --> |"👨‍🏫 我是老師"| CheckTeacherAuth
-        CheckTeacherAuth --> |"未驗證"| TeacherDialog
-        TeacherDialog --> CheckPwd
-        CheckPwd --> |"密碼正確"| TeacherVerified
-        CheckPwd --> |"取消或關閉"| ResetRole
-        CheckTeacherAuth --> |"已驗證"| TeacherVerified
-        TeacherVerified --> TeacherDashboard
+    A[選擇老師] --> B{已驗證？}
+    B -->|否| P[輸入密碼]
+    P -->|正確| D[教師儀表板]:::dash
+    P -->|取消| H[返回首頁]:::guard
+    B -->|是| D
 
-        TeacherDashboard --> T_Manage
-        TeacherDashboard --> T_Analytics
-        TeacherDashboard --> T_Export
-        TeacherDashboard --> T_Logout
-        T_Logout --> ResetRole
-    end
-
-    subgraph SG_Student ["🎓 學生端自主學習流程"]
-        StudentInput["側邊欄填寫資料：<br/>1. 班級 (801~821)<br/>2. 座號 (01~30)<br/>3. 輸入姓名<br/>4. 選擇學習單元"]:::actionNode
-        StudentPortal["主畫面解鎖：<br/>1. 頂部銀河個人學習儀表板<br/>2. 四大模組經典標籤頁 (st.tabs)"]:::pageNode
-        TabNav{"選擇標籤頁"}:::decisionNode
-
-        SelectRole --> |"🎓 我是學生"| StudentInput
-        StudentInput --> CheckReady
-        CheckReady --> |"是 (條件已滿足)"| StudentPortal
-        StudentPortal --> TabNav
-
-        %% 模組 1
-        TabLearn["【📖 開始學習】<br/>• 生活化白話重點手札<br/>• 生活情境核心案例解析<br/>• 直式樹狀心智圖 (graph LR)"]:::pageNode
-        JumpBtn["點擊按鈕：<br/>🚀 前往【✏️ 小試身手】觀念練習"]:::actionNode
-
-        TabNav --> |"📖 開始學習"| TabLearn
-        TabLearn --> JumpBtn
-        JumpBtn --> |"程式化切換分頁"| TabPractice
-
-        %% 模組 2
-        TabPractice["【✏️ 小試身手】<br/>• 8 題素養情境單選題"]:::pageNode
-        QuizSubmit["學生作答並送出成果"]:::actionNode
-        QuizGrade["系統即時自動批改：<br/>• 計算總分與對錯分析<br/>• 展開觀念充電站補強指南"]:::pageNode
-        SaveLog["自動寫入歷程紀錄<br/>(logger_utils.py)"]:::actionNode
-
-        TabNav --> |"✏️ 小試身手"| TabPractice
-        TabPractice --> QuizSubmit
-        QuizSubmit --> QuizGrade
-        QuizGrade --> SaveLog
-
-        %% 模組 3
-        TabAI["【💬 問問AI助教】<br/>• 獨立思辨對話專區<br/>• 推薦提問引導思考"]:::pageNode
-        SendPrompt["學生提問送出"]:::actionNode
-        GeminiCall["Google GenAI API (gemini-2.5-flash)<br/>角色扮演：國中公民啟發式助教"]:::actionNode
-        AIResponse["動態生成引導式回覆<br/>(引導反思而非直接給答案)"]:::pageNode
-
-        TabNav --> |"💬 問問AI助教"| TabAI
-        TabAI --> SendPrompt
-        SendPrompt --> GeminiCall
-        GeminiCall --> AIResponse
-
-        %% 模組 4
-        TabFootprint["【🌱 我的足跡】<br/>• 個人歷程儀表板<br/>• 單元完成度進度條<br/>• 歷史測驗得分與錯題診斷<br/>• 學習歷程時間軸"]:::pageNode
-
-        TabNav --> |"🌱 我的足跡"| TabFootprint
-    end
-
-    subgraph SG_Data ["💾 系統資料持久層"]
-        DB_Units[("教材庫<br/>(units_db.json)")]:::dataNode
-        DB_Logs[("學生歷程庫<br/>(student_logs/*.json)")]:::dataNode
-        GeminiService["Google GenAI 服務<br/>(Gemini 2.5 Flash)"]:::dataNode
-    end
-
-    %% 資料流跨層關聯
-    T_Manage <--> DB_Units
-    T_Manage -. "呼叫 AI 萃取生成教材" .-> GeminiService
-    T_Analytics <--> DB_Logs
-    SaveLog --> DB_Logs
-    TabFootprint <--> DB_Logs
-    GeminiCall -. "API 請求與串流回應" .-> GeminiService
+    D --> M[單元管理<br/>編輯・AI 生成]
+    D --> N[學生歷程看板]
+    D --> E[報表匯出<br/>CSV / JSON]
+    D --> O[登出] --> H
 ```
 
 ---

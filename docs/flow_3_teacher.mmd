@@ -1,0 +1,15 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
+flowchart LR
+    classDef dash fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef guard fill:#FFEDD5,stroke:#EA580C,color:#7C2D12;
+
+    A[選擇老師] --> B{已驗證？}
+    B -->|否| P[輸入密碼]
+    P -->|正確| D[教師儀表板]:::dash
+    P -->|取消| H[返回首頁]:::guard
+    B -->|是| D
+
+    D --> M[單元管理<br/>編輯・AI 生成]
+    D --> N[學生歷程看板]
+    D --> E[報表匯出<br/>CSV / JSON]
+    D --> O[登出] --> H

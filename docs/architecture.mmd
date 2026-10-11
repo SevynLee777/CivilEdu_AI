@@ -1,0 +1,48 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569', 'clusterBkg':'#F8FAFC', 'clusterBorder':'#94A3B8'}}}%%
+flowchart TB
+    classDef user fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef ui fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A;
+    classDef logic fill:#E0E7FF,stroke:#4F46E5,color:#312E81;
+    classDef data fill:#DCFCE7,stroke:#16A34A,color:#14532D;
+    classDef ext fill:#FEF3C7,stroke:#D97706,color:#78350F;
+    classDef unused fill:#F1F5F9,stroke:#94A3B8,color:#64748B,stroke-dasharray:5 4;
+
+    subgraph L0 ["使用者"]
+        S([🎓 學生]):::user
+        T([👨‍🏫 老師]):::user
+    end
+
+    subgraph L1 ["展示層 · Streamlit"]
+        APP["app.py<br/>介面・驗證"]:::ui
+    end
+
+    subgraph L2 ["業務邏輯層"]
+        LU["logger_utils.py<br/>歷程・報表"]:::logic
+        UM["unit_manager.py<br/>教材・AI 助教"]:::logic
+        DL["data_loader.py<br/>未使用"]:::unused
+    end
+
+    subgraph L3 ["資料層 · 本地 JSON"]
+        LOGS[("student_logs/<br/>學生歷程")]:::data
+        UDB[("units_db.json<br/>教材庫")]:::data
+        CFG[("config.json<br/>materials/")]:::unused
+    end
+
+    subgraph L4 ["外部服務"]
+        GEM[["Gemini<br/>2.5 Flash"]]:::ext
+        ENV[".env<br/>金鑰・密碼"]:::ext
+    end
+
+    S --> APP
+    T --> APP
+
+    APP -->|歷程| LU
+    APP -->|教材・提問| UM
+    APP -.-> DL
+
+    LU <--> LOGS
+    UM <--> UDB
+    DL -.-> CFG
+
+    UM -->|生成・問答| GEM
+    ENV -.->|讀取設定| UM

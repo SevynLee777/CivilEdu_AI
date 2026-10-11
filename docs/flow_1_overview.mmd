@@ -1,0 +1,17 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
+flowchart LR
+    classDef role fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef data fill:#DCFCE7,stroke:#16A34A,color:#14532D;
+    classDef ai fill:#FEF3C7,stroke:#D97706,color:#78350F;
+
+    U([使用者]) --> R{選擇身分}
+    R -->|🎓 學生| S[學生端<br/>四大學習模組]:::role
+    R -->|👨‍🏫 老師| T[教師後台<br/>密碼驗證]:::role
+
+    S -->|讀取教材| D[(教材庫<br/>units_db.json)]:::data
+    S <-->|寫入 / 查詢歷程| L[(學習歷程<br/>student_logs)]:::data
+    T <-->|管理單元| D
+    T -->|全班分析| L
+
+    S -.->|AI 助教問答| G[[Gemini 2.5 Flash]]:::ai
+    T -.->|AI 生成教材| G

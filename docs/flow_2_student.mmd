@@ -1,0 +1,22 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontSize':'18px', 'primaryColor':'#E0F2FE', 'primaryBorderColor':'#0284C7', 'primaryTextColor':'#0F172A', 'lineColor':'#475569'}}}%%
+flowchart TD
+    classDef guard fill:#FFEDD5,stroke:#EA580C,color:#7C2D12;
+    classDef tab fill:#1E3A8A,stroke:#1E3A8A,color:#FFFFFF;
+    classDef data fill:#DCFCE7,stroke:#16A34A,color:#14532D;
+    classDef ai fill:#FEF3C7,stroke:#D97706,color:#78350F;
+
+    A[填寫個人資料<br/>選擇學習單元] --> B{資料齊全？}
+    B -->|否| W[航行準備中<br/>提示缺漏項目]:::guard
+    W --> A
+    B -->|是| C[學習儀表板]
+
+    C --> T1[📖 開始學習]:::tab
+    C --> T2[✏️ 小試身手]:::tab
+    C --> T3[💬 AI 助教]:::tab
+    C --> T4[🌱 我的足跡]:::tab
+
+    T1 -->|前往練習| T2
+    T2 --> Q[8 題自動批改<br/>觀念補強]
+    Q -->|寫入| L[(學習歷程<br/>student_logs)]:::data
+    T3 --> G[Gemini<br/>引導式回覆]:::ai
+    T4 -.->|讀取| L
