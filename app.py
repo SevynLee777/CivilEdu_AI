@@ -18,6 +18,21 @@ try:
 except Exception:
     pass
 
+def queue_unit_notice(level, message):
+    """暫存教材管理的結果訊息，於 st.rerun() 後由 show_unit_notices() 顯示。level: success / warning / error"""
+    st.session_state.setdefault("unit_notices", []).append((level, message))
+
+def queue_fallback_notice(unit):
+    """AI 生成失敗、改用預設範本時提醒老師。"""
+    reason = unit.get("_fallback_reason")
+    if reason:
+        queue_unit_notice("warning", f"⚠️ AI 未能根據教材生成內容（原因：{reason}），此單元暫時使用預設範本。"
+                                     "請確認 GEMINI_API_KEY 設定後，於「✏️ 修改教材」勾選 AI 重新生成。")
+
+def show_unit_notices():
+    for level, message in st.session_state.pop("unit_notices", []):
+        getattr(st, level)(message)
+
 def safe_extract_text_from_file_upload(file_input, filename=""):
     """安全解析上傳檔案文字，優先呼叫 unit_manager，若遇模組快取延遲則以本地備援執行"""
     if hasattr(unit_manager, 'extract_text_from_file_upload'):
@@ -481,6 +496,14 @@ st.markdown("""
         font-weight: 600 !important;
         letter-spacing: 0.02em !important;
         line-height: 1.4 !important;
+    }
+
+    /* 上面的 button span 規則也會套到分頁內的一般按鈕（例如檔案上傳鈕），
+       需還原 Material 圖示字型，否則圖示會顯示成文字（如 uploadupload 重疊） */
+    div[data-testid="stTabs"] [data-testid="stIconMaterial"] {
+        font-family: "Material Symbols Rounded" !important;
+        font-weight: 400 !important;
+        letter-spacing: normal !important;
     }
 
     /* 選中標籤頁（經典金黃下標線與微柔光底色） */
@@ -1369,13 +1392,18 @@ elif is_teacher_ready:
         st.markdown("### 📚 教材單元管理")
         st.caption("教師可直接上傳教材檔案（.docx、.doc、.pdf、.txt、.md）或貼上課本內容，系統將自動萃取重點、整理白話內容、建立 4 則生活案例、隨機題庫與補救說明。")
 
+        # 顯示上一次建立 / 修改 / 刪除的結果（st.rerun 之後才看得到）
+        show_unit_notices()
+
         # ➕ 新增教材區
+        # form_ver 在建立成功後遞增，用新的 widget key 清空上傳檔案與表單，避免重複建立
+        form_ver = st.session_state.setdefault("new_unit_form_ver", 0)
         with st.expander("➕ 新增學習單元 (支援直接上傳檔案或文字輸入)", expanded=False):
             st.markdown("#### 📁 方式一：直接上傳教材檔案（推薦）")
             uploaded_file = st.file_uploader(
                 "選擇或拖曳教材檔案（支援 .docx, .doc, .pdf, .txt, .md）",
                 type=["docx", "doc", "pdf", "txt", "md"],
-                key="new_unit_file_uploader",
+                key=f"new_unit_file_uploader_{form_ver}",
                 help="系統會自動讀取檔案文字，並自動填入下方單元名稱與內容！"
             )
 
@@ -1393,9 +1421,11 @@ elif is_teacher_ready:
             with st.form("new_unit_form"):
                 default_title = st.session_state.get("cached_upload_title", "")
                 default_content = st.session_state.get("cached_upload_text", "")
+                # key 綁定表單版本與上傳檔案，換檔案時自動帶入新內容，建立成功後清空
+                field_sig = f"{form_ver}_{st.session_state.get('last_uploaded_file_sig', '')}"
 
-                new_title = st.text_input("單元名稱", value=default_title, placeholder="例如：第3課：政府的組織與職權")
-                new_content = st.text_area("課本教材內容", value=default_content, placeholder="請直接貼上課本段落、講義文字，或透過上方按鈕直接上傳檔案...", height=220)
+                new_title = st.text_input("單元名稱", value=default_title, placeholder="例如：第3課：政府的組織與職權", key=f"new_unit_title_{field_sig}")
+                new_content = st.text_area("課本教材內容", value=default_content, placeholder="請直接貼上課本段落、講義文字，或透過上方按鈕直接上傳檔案...", height=220, key=f"new_unit_content_{field_sig}")
 
                 submit_create = st.form_submit_button("🚀 建立學習單元", type="primary")
 
@@ -1403,12 +1433,18 @@ elif is_teacher_ready:
                     if not new_title.strip() or not new_content.strip():
                         st.warning("請填寫單元名稱與教材內容（或透過上方上傳教材檔案）喔！")
                     else:
-                        with st.spinner("🤖 AI 正在分析教材、萃取重點、建立 4 則生活案例與題庫..."):
-                            created = unit_manager.create_unit(new_title.strip(), new_content.strip())
+                        try:
+                            with st.spinner("🤖 AI 正在分析教材、萃取重點、建立 4 則生活案例與題庫..."):
+                                created = unit_manager.create_unit(new_title.strip(), new_content.strip())
+                        except Exception as e:
+                            st.error(f"❌ 建立學習單元失敗：{e}")
+                        else:
                             st.session_state.pop("cached_upload_title", None)
                             st.session_state.pop("cached_upload_text", None)
                             st.session_state.pop("last_uploaded_file_sig", None)
-                            st.success(f"🎉 成功建立學習單元【{created['title']}】！已直接發布供學生使用。")
+                            st.session_state["new_unit_form_ver"] = form_ver + 1
+                            queue_unit_notice("success", f"🎉 成功建立學習單元【{created['title']}】！已直接發布供學生使用。")
+                            queue_fallback_notice(created)
                             st.rerun()
 
         st.markdown("---")
@@ -1446,9 +1482,13 @@ elif is_teacher_ready:
                             st.session_state[f"show_edit_{u_id}"] = not st.session_state.get(f"show_edit_{u_id}", False)
                     with c_del:
                         if st.button("🗑️ 刪除單元", key=f"del_btn_{u_id}", use_container_width=True):
-                            unit_manager.delete_unit(u_id)
-                            st.success(f"已刪除單元【{u_title}】")
-                            st.rerun()
+                            try:
+                                unit_manager.delete_unit(u_id)
+                            except Exception as e:
+                                st.error(f"❌ 刪除單元失敗：{e}")
+                            else:
+                                queue_unit_notice("success", f"已刪除單元【{u_title}】")
+                                st.rerun()
 
                     # 查看內容展開
                     if st.session_state.get(f"show_detail_{u_id}", False):
@@ -1492,13 +1532,22 @@ elif is_teacher_ready:
                             regen = st.checkbox("🔄 是否由 AI 重新自動生成重點、4 則生活案例與隨機題庫？", value=False)
                             save_edit = st.form_submit_button("💾 儲存修改", type="primary")
                             if save_edit:
-                                unit_manager.update_unit(u_id, edit_t, edit_c, regenerate=regen)
-                                st.session_state[f"show_edit_{u_id}"] = False
-                                st.session_state.pop(f"edit_sig_{u_id}", None)
-                                st.session_state.pop(f"edit_title_{u_id}", None)
-                                st.session_state.pop(f"edit_text_{u_id}", None)
-                                st.success("已更新單元內容！")
-                                st.rerun()
+                                try:
+                                    with st.spinner("💾 正在儲存修改..."):
+                                        updated = unit_manager.update_unit(u_id, edit_t, edit_c, regenerate=regen)
+                                except Exception as e:
+                                    st.error(f"❌ 儲存修改失敗：{e}")
+                                else:
+                                    st.session_state[f"show_edit_{u_id}"] = False
+                                    st.session_state.pop(f"edit_sig_{u_id}", None)
+                                    st.session_state.pop(f"edit_title_{u_id}", None)
+                                    st.session_state.pop(f"edit_text_{u_id}", None)
+                                    if updated is None:
+                                        queue_unit_notice("warning", "找不到這個單元，可能已被刪除，請重新整理頁面。")
+                                    else:
+                                        queue_unit_notice("success", f"已更新單元【{updated['title']}】的內容！")
+                                        queue_fallback_notice(updated)
+                                    st.rerun()
 
                     st.markdown("<br>", unsafe_allow_html=True)
 

@@ -2,6 +2,7 @@ import os
 import json
 from datetime import datetime
 import pandas as pd
+import storage
 
 LOG_DIR = os.path.join(os.path.dirname(__file__), "student_logs")
 
@@ -9,23 +10,32 @@ def ensure_log_dir():
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR, exist_ok=True)
 
-def get_student_file_path(student_info):
-    ensure_log_dir()
+def get_student_key(student_info):
+    """學生紀錄的識別碼：班級_座號_姓名（本地檔名與 Supabase 主鍵共用）。"""
     class_name = str(student_info.get("class_name", "801")).strip()
     seat_num = str(student_info.get("seat_num", "01")).strip()
     name = str(student_info.get("name", "學生")).strip()
-    
-    filename = f"{class_name}_{seat_num}_{name}.json"
-    return os.path.join(LOG_DIR, filename)
+    return f"{class_name}_{seat_num}_{name}"
+
+def get_student_file_path(student_info):
+    ensure_log_dir()
+    return os.path.join(LOG_DIR, f"{get_student_key(student_info)}.json")
 
 def load_student_record(student_info):
-    filepath = get_student_file_path(student_info)
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[Error] Failed to read student log {filepath}: {e}")
+    """讀取學生紀錄；使用 Supabase 且連線失敗時拋出 storage.StorageError，
+    避免以空白紀錄覆蓋雲端上的既有歷程。"""
+    if storage.is_remote():
+        data = storage.fetch_one(storage.STUDENT_TABLE, get_student_key(student_info))
+        if data:
+            return data
+    else:
+        filepath = get_student_file_path(student_info)
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[Error] Failed to read student log {filepath}: {e}")
             
     return {
         "student_info": student_info,
@@ -36,15 +46,32 @@ def load_student_record(student_info):
     }
 
 def save_student_record(record):
-    ensure_log_dir()
+    """儲存學生紀錄，成功回傳 True。"""
     student_info = record.get("student_info", {})
-    filepath = get_student_file_path(student_info)
     record["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if storage.is_remote():
+        try:
+            storage.upsert(storage.STUDENT_TABLE, [(get_student_key(student_info), record, 0)])
+            return True
+        except storage.StorageError as e:
+            print(f"[Error] Failed to save student record: {e}")
+            return False
+    filepath = get_student_file_path(student_info)
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=2)
+        return True
     except Exception as e:
         print(f"[Error] Failed to save student log {filepath}: {e}")
+        return False
+
+def _load_record_for_update(student_info):
+    """讀取準備更新的紀錄；讀取失敗回傳 None，呼叫端應略過寫入。"""
+    try:
+        return load_student_record(student_info)
+    except storage.StorageError as e:
+        print(f"[Error] {e}")
+        return None
 
 def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_tags, weak_tags):
     """
@@ -54,7 +81,7 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
     - 🌿 再練習 (50% <= pct < 80%)
     - 🌱 再看看 (pct < 50%)
     """
-    record = load_student_record(student_info)
+    record = _load_record_for_update(student_info)
     pct = (score / total * 100) if total > 0 else 0
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -64,6 +91,9 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
         status = "🌿 再練習"
     else:
         status = "🌱 再看看"
+
+    if record is None:
+        return status
 
     if "unit_progress" not in record:
         record["unit_progress"] = {}
@@ -102,7 +132,9 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
     return status
 
 def log_ai_chat(student_info, unit_title, question, answer):
-    record = load_student_record(student_info)
+    record = _load_record_for_update(student_info)
+    if record is None:
+        return
     if "ai_chats" not in record:
         record["ai_chats"] = []
     record["ai_chats"].append({
@@ -115,11 +147,17 @@ def log_ai_chat(student_info, unit_title, question, answer):
 
 def get_student_footprint(student_info):
     """Returns the student's personal learning footprints without any class rankings."""
-    record = load_student_record(student_info)
+    record = _load_record_for_update(student_info) or {}
     unit_progress = record.get("unit_progress", {})
     return list(unit_progress.values())
 
 def get_all_student_records():
+    if storage.is_remote():
+        try:
+            return storage.fetch_all(storage.STUDENT_TABLE)
+        except storage.StorageError as e:
+            print(f"[Error] {e}")
+            return []
     ensure_log_dir()
     records = []
     if not os.path.exists(LOG_DIR):

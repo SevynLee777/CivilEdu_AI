@@ -13,6 +13,7 @@ import docx
 import pdfplumber
 import struct
 import olefile
+import storage
 
 load_dotenv()
 
@@ -485,6 +486,7 @@ def generate_unit_bundle(title, raw_content):
   }}
 }}
 """
+    fallback_reason = "AI 回傳的內容格式不完整"
     try:
         raw_output = call_gemini_api(prompt, is_json=True)
         data = extract_json(raw_output)
@@ -492,9 +494,12 @@ def generate_unit_bundle(title, raw_content):
             return data
     except Exception as e:
         print(f"[Warning] AI Bundle generation exception: {e}")
+        fallback_reason = str(e)
 
-    # Safe fallback if AI parsing fails
-    return get_default_fallback_bundle(title, raw_content)
+    # Safe fallback if AI parsing fails；以 _fallback_reason 告知呼叫端改用了預設範本
+    bundle = get_default_fallback_bundle(title, raw_content)
+    bundle["_fallback_reason"] = fallback_reason
+    return bundle
 
 def get_default_fallback_bundle(title, raw_content):
     """Fallback generator ensuring the unit is never lost if API has temporary timeout."""
@@ -1336,8 +1341,8 @@ def get_builtin_default_units():
     }
 ]
 
-def load_all_units():
-    """Loads all units from units_db.json or initializes default units."""
+def _load_local_units():
+    """讀取本地 units_db.json；檔案不存在或格式錯誤時回傳 None。"""
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -1346,6 +1351,27 @@ def load_all_units():
                     return units
         except Exception as e:
             print(f"[Error] Failed to read units db: {e}")
+    return None
+
+def load_all_units():
+    """Loads all units from Supabase (if configured) or units_db.json, initializing defaults when empty."""
+    if storage.is_remote():
+        try:
+            units = storage.fetch_all(storage.UNITS_TABLE)
+        except storage.StorageError as e:
+            # 連線失敗時只讀取本地資料，不寫回，避免用預設內容覆蓋雲端資料
+            print(f"[Error] {e}")
+            return _load_local_units() or get_builtin_default_units()
+        if units:
+            return units
+        # 雲端資料庫為空：以 repo 內的 units_db.json（或內建單元）作為初始資料
+        seed_units = _load_local_units() or get_builtin_default_units()
+        save_all_units(seed_units)
+        return seed_units
+
+    units = _load_local_units()
+    if units:
+        return units
 
     # Initialize default units
     default_units = get_builtin_default_units()
@@ -1353,7 +1379,15 @@ def load_all_units():
     return default_units
 
 def save_all_units(units):
-    """Saves unit list to units_db.json."""
+    """Saves unit list to Supabase (if configured) or units_db.json. Returns True on success."""
+    if storage.is_remote():
+        try:
+            storage.upsert(storage.UNITS_TABLE,
+                           [(u.get("id") or u.get("title"), u, i) for i, u in enumerate(units)])
+            return True
+        except storage.StorageError as e:
+            print(f"[Error] Failed to save units: {e}")
+            return False
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(units, f, ensure_ascii=False, indent=2)
@@ -1361,6 +1395,9 @@ def save_all_units(units):
     except Exception as e:
         print(f"[Error] Failed to save units db: {e}")
         return False
+
+def _save_failed_error():
+    return RuntimeError(f"教材儲存失敗（儲存位置：{storage.backend_name()}），請稍後再試或通知系統管理員。")
 
 def get_unit(unit_id):
     """Gets a specific unit by its id."""
@@ -1374,7 +1411,9 @@ def create_unit(title, raw_content):
     """
     Teacher creates a new unit:
     1. AI analyzes content and generates the complete bundle automatically.
-    2. Stores in units_db.json.
+    2. Stores in Supabase or units_db.json.
+    Raises RuntimeError when saving fails. The returned dict carries "_fallback_reason"
+    (not persisted) when AI generation failed and the default template was used.
     """
     units = load_all_units()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1382,6 +1421,7 @@ def create_unit(title, raw_content):
 
     # Call AI bundle generator
     bundle = generate_unit_bundle(title, raw_content)
+    fallback_reason = bundle.pop("_fallback_reason", None)
 
     new_unit = {
         "id": unit_id,
@@ -1398,22 +1438,26 @@ def create_unit(title, raw_content):
     }
 
     units.append(new_unit)
-    save_all_units(units)
-    return new_unit
+    if not save_all_units(units):
+        raise _save_failed_error()
+    return {**new_unit, "_fallback_reason": fallback_reason}
 
 def update_unit(unit_id, title, raw_content, regenerate=False):
-    """Updates unit title, content, or optionally regenerates AI contents."""
+    """Updates unit title, content, or optionally regenerates AI contents.
+    Raises RuntimeError when saving fails; returns None if the unit no longer exists."""
     units = load_all_units()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     for i, u in enumerate(units):
         if u.get("id") == unit_id:
             u["title"] = title.strip()
             u["raw_content"] = raw_content.strip()
             u["updated_at"] = now_str
-            
+            fallback_reason = None
+
             if regenerate:
                 bundle = generate_unit_bundle(title, raw_content)
+                fallback_reason = bundle.pop("_fallback_reason", None)
                 u["key_points"] = bundle.get("key_points", [])
                 u["easy_content"] = bundle.get("easy_content", "")
                 u["life_cases"] = bundle.get("life_cases", [])
@@ -1422,18 +1466,29 @@ def update_unit(unit_id, title, raw_content, regenerate=False):
                 u["remediation_guides"] = bundle.get("remediation_guides", {})
                 
             units[i] = u
-            save_all_units(units)
-            return u
+            if not save_all_units(units):
+                raise _save_failed_error()
+            return {**u, "_fallback_reason": fallback_reason}
     return None
 
 def delete_unit(unit_id):
-    """Deletes a unit by id."""
+    """Deletes a unit by id. Raises RuntimeError when the deletion cannot be saved."""
     units = load_all_units()
-    new_units = [u for u in units if u.get("id") != unit_id and u.get("title") != unit_id]
-    if len(new_units) < len(units):
-        save_all_units(new_units)
+    removed = [u for u in units if u.get("id") == unit_id or u.get("title") == unit_id]
+    if not removed:
+        return False
+    if storage.is_remote():
+        try:
+            for u in removed:
+                storage.delete(storage.UNITS_TABLE, u.get("id") or u.get("title"))
+        except storage.StorageError as e:
+            print(f"[Error] Failed to delete unit: {e}")
+            raise _save_failed_error() from e
         return True
-    return False
+    new_units = [u for u in units if u not in removed]
+    if not save_all_units(new_units):
+        raise _save_failed_error()
+    return True
 
 def ask_ai_tutor(question, unit_title, unit_content):
     """Answers student questions using friendly plain analogies."""
