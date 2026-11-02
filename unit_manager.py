@@ -5,11 +5,13 @@ import re
 import uuid
 import random
 import copy
+import time
 from datetime import datetime
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 import docx
+from docx.table import Table
 import pdfplumber
 import struct
 import olefile
@@ -22,11 +24,15 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "units_db.json")
 # Candidate models for fallback
 CANDIDATE_MODELS = [
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash-lite',
+    'gemini-3.5-flash',
     'gemini-flash-latest',
-    'gemini-pro-latest'
+    'gemini-flash-lite-latest'
 ]
+
+# 模型暫時忙碌或超過流量時先重試，再換下一個模型
+RETRYABLE_STATUS = {429, 500, 503}
+MAX_ATTEMPTS_PER_MODEL = 2
+RETRY_DELAY_SECONDS = 3
 
 def get_api_key():
     key = os.getenv("GEMINI_API_KEY")
@@ -44,24 +50,30 @@ def call_gemini_api(prompt, is_json=False):
         raise ValueError("未設定 GEMINI_API_KEY，無法呼叫 Gemini API。")
 
     client = genai.Client(api_key=api_key)
-    last_exception = None
+    errors = []
     config = types.GenerateContentConfig(
         response_mime_type="application/json"
     ) if is_json else None
 
     for m_name in CANDIDATE_MODELS:
-        try:
-            res = client.models.generate_content(
-                model=m_name,
-                contents=prompt,
-                config=config
-            )
-            return res.text
-        except Exception as e:
-            last_exception = e
-            continue
+        for attempt in range(MAX_ATTEMPTS_PER_MODEL):
+            try:
+                res = client.models.generate_content(
+                    model=m_name,
+                    contents=prompt,
+                    config=config
+                )
+                if res.text:
+                    return res.text
+                errors.append(f"{m_name}: 回傳內容為空")
+                break
+            except Exception as e:
+                errors.append(f"{m_name}: {str(e)[:100]}")
+                if getattr(e, "code", None) not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS_PER_MODEL - 1:
+                    break
+                time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
 
-    raise Exception(f"所有 Gemini 模型呼叫失敗: {last_exception}")
+    raise Exception("所有 Gemini 模型呼叫失敗：" + "；".join(errors))
 
 def extract_json(text):
     """Extracts and parses JSON from model output safely."""
@@ -179,6 +191,25 @@ def _extract_raw_text_from_stream(stream_bytes):
     lines950 = [l.strip() for l in clean950.splitlines() if len(l.strip()) > 3]
     return '\n'.join(lines950)
 
+def _extract_docx_text(file_bytes):
+    """依文件順序讀取 .docx 的段落與表格文字（文字方塊不在此範圍）。"""
+    doc = docx.Document(io.BytesIO(file_bytes))
+    lines = []
+    for block in doc.iter_inner_content():
+        if isinstance(block, Table):
+            for row in block.rows:
+                cells = []
+                for cell in row.cells:
+                    text = ' '.join(cell.text.split())
+                    # 合併儲存格會在相鄰欄位重複出現
+                    if text and (not cells or cells[-1] != text):
+                        cells.append(text)
+                if cells:
+                    lines.append(' | '.join(cells))
+        elif block.text.strip():
+            lines.append(block.text.strip())
+    return '\n'.join(lines)
+
 def extract_text_from_file_upload(file_input, filename=""):
     """
     Extracts text from uploaded file (supports .docx, .doc, .pdf, .txt, .md).
@@ -210,8 +241,7 @@ def extract_text_from_file_upload(file_input, filename=""):
     extracted_text = ""
     try:
         if ext == 'docx':
-            doc = docx.Document(io.BytesIO(file_bytes))
-            extracted_text = '\n'.join([p.text.strip() for p in doc.paragraphs if p.text.strip()])
+            extracted_text = _extract_docx_text(file_bytes)
         elif ext == 'doc':
             extracted_text = extract_text_from_doc_bytes(file_bytes)
         elif ext == 'pdf':
@@ -288,6 +318,54 @@ def randomize_practice_questions(unit, num_questions=8):
 
     return processed_qs
 
+def fill_missing_remediation(bundle, title, raw_content):
+    """確保每個題目標籤都有補強內容：缺少時請 AI 補生成，仍缺的以題目解析代替。回傳補不齊的標籤。"""
+    questions = bundle.get("practice_questions", [])
+    tags = list(dict.fromkeys(q.get("concept_tag", "核心觀念") for q in questions))
+    guides = bundle.get("remediation_guides")
+    if not isinstance(guides, dict):
+        guides = {}
+    bundle["remediation_guides"] = guides
+
+    missing = [t for t in tags if t not in guides]
+    if missing:
+        prompt = f"""
+你是國中八年級公民科名師。請依據單元【{title}】的教材，為下列每一個核心觀念各寫一份答錯時的補強說明。
+
+【核心觀念】：{json.dumps(missing, ensure_ascii=False)}
+
+【課本教材原文】：
+{raw_content[:6000]}
+
+請輸出純 JSON，key 必須與上列核心觀念一字不差，不可遺漏（請嚴格使用繁體中文）：
+{{
+  "核心觀念": {{
+    "concept": "核心觀念",
+    "simple_explanation": "答錯時給學生的極簡白話說明與比喻（約50-80字）",
+    "life_case": "超貼切的生活比喻",
+    "pitfall_tip": "避坑判斷口訣（一句話秒懂，例如：XXX是...不是...）"
+  }}
+}}
+"""
+        try:
+            data = extract_json(call_gemini_api(prompt, is_json=True))
+            if isinstance(data, dict):
+                for tag in missing:
+                    guide = data.get(tag)
+                    if isinstance(guide, dict) and guide.get("simple_explanation"):
+                        guides[tag] = guide
+        except Exception as e:
+            print(f"[Warning] AI remediation generation exception: {e}")
+
+    still_missing = [t for t in tags if t not in guides]
+    for tag in still_missing:
+        explanation = next((q.get("explanation") for q in questions
+                            if q.get("concept_tag", "核心觀念") == tag and q.get("explanation")), None)
+        guides[tag] = {"concept": tag}
+        if explanation:
+            guides[tag]["simple_explanation"] = explanation
+    return still_missing
+
 def generate_unit_bundle(title, raw_content):
     """
     Analyzes textbook content and automatically generates:
@@ -304,6 +382,9 @@ def generate_unit_bundle(title, raw_content):
 【核心要求】：
 1. 生活案例請出滿 4 個生動實例（包含校園生活、日常生活、網路社群、社區公共生活）。
 2. 小試身手題庫池請出滿 16 道生活情境單選題（q1 至 q16），讓系統每次可動態隨機抽取 8 題測驗，題題精彩。
+3. 題目的 concept_tag 請歸納成 4～6 個核心觀念，由多道題共用，不要每題各用一個標籤；同一個標籤的文字必須完全相同。
+4. remediation_guides 必須為題目中出現的「每一個」concept_tag 各寫一項，key 要與 concept_tag 一字不差，不可遺漏（下方 JSON 範例只示意格式，項數請依實際標籤數）。
+5. mindmap_mermaid 必須是簡潔的純樹狀圖（graph LR）：中心節點連到 3～5 個主題，每個主題再連 2～3 個重點，節點總數不超過 15 個。每個節點只能有一條連入的線，不可跨分支連線，不可使用 subgraph；節點文字不超過 12 字，一律寫成 代號["文字"] 的格式。
 
 【課本教材原文】：
 {raw_content[:12000]}
@@ -491,6 +572,9 @@ def generate_unit_bundle(title, raw_content):
         raw_output = call_gemini_api(prompt, is_json=True)
         data = extract_json(raw_output)
         if data and "key_points" in data and "practice_questions" in data:
+            still_missing = fill_missing_remediation(data, title, raw_content)
+            if still_missing:
+                data["_generation_note"] = f"有 {len(still_missing)} 個觀念的補強內容未能由 AI 生成，已先用題目解析代替。"
             return data
     except Exception as e:
         print(f"[Warning] AI Bundle generation exception: {e}")
@@ -1413,7 +1497,8 @@ def create_unit(title, raw_content):
     1. AI analyzes content and generates the complete bundle automatically.
     2. Stores in Supabase or units_db.json.
     Raises RuntimeError when saving fails. The returned dict carries "_fallback_reason"
-    (not persisted) when AI generation failed and the default template was used.
+    (not persisted) when AI generation failed and the default template was used,
+    and "_generation_note" when part of the content could not be generated.
     """
     units = load_all_units()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1421,7 +1506,7 @@ def create_unit(title, raw_content):
 
     # Call AI bundle generator
     bundle = generate_unit_bundle(title, raw_content)
-    fallback_reason = bundle.pop("_fallback_reason", None)
+    notices = {k: bundle.pop(k, None) for k in ("_fallback_reason", "_generation_note")}
 
     new_unit = {
         "id": unit_id,
@@ -1440,7 +1525,7 @@ def create_unit(title, raw_content):
     units.append(new_unit)
     if not save_all_units(units):
         raise _save_failed_error()
-    return {**new_unit, "_fallback_reason": fallback_reason}
+    return {**new_unit, **notices}
 
 def update_unit(unit_id, title, raw_content, regenerate=False):
     """Updates unit title, content, or optionally regenerates AI contents.
@@ -1453,11 +1538,11 @@ def update_unit(unit_id, title, raw_content, regenerate=False):
             u["title"] = title.strip()
             u["raw_content"] = raw_content.strip()
             u["updated_at"] = now_str
-            fallback_reason = None
+            notices = {}
 
             if regenerate:
                 bundle = generate_unit_bundle(title, raw_content)
-                fallback_reason = bundle.pop("_fallback_reason", None)
+                notices = {k: bundle.pop(k, None) for k in ("_fallback_reason", "_generation_note")}
                 u["key_points"] = bundle.get("key_points", [])
                 u["easy_content"] = bundle.get("easy_content", "")
                 u["life_cases"] = bundle.get("life_cases", [])
@@ -1468,7 +1553,7 @@ def update_unit(unit_id, title, raw_content, regenerate=False):
             units[i] = u
             if not save_all_units(units):
                 raise _save_failed_error()
-            return {**u, "_fallback_reason": fallback_reason}
+            return {**u, **notices}
     return None
 
 def delete_unit(unit_id):

@@ -29,6 +29,9 @@ def queue_fallback_notice(unit):
     if reason:
         queue_unit_notice("warning", f"⚠️ AI 未能根據教材生成內容（原因：{reason}），此單元暫時使用預設範本。"
                                      "請確認 GEMINI_API_KEY 設定後，於「✏️ 修改教材」勾選 AI 重新生成。")
+    note = unit.get("_generation_note")
+    if note:
+        queue_unit_notice("warning", f"⚠️ {note}可於「✏️ 修改教材」勾選 AI 重新生成。")
 
 def show_unit_notices():
     for level, message in st.session_state.pop("unit_notices", []):
