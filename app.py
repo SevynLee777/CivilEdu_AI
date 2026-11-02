@@ -1181,6 +1181,7 @@ if is_student_ready:
                 if submit_btn:
                     st.session_state.practice_submitted = True
                     st.session_state.practice_answers = user_choices
+                    st.session_state.pop("practice_log_result", None)
                     st.rerun()
 
             # Result Display
@@ -1203,16 +1204,18 @@ if is_student_ready:
                     else:
                         weak_tags.append(tag)
 
-                # Save practice log
-                status, log_saved = logger_utils.log_unit_practice(
-                    student_info,
-                    current_unit["id"],
-                    current_unit["title"],
-                    score,
-                    total,
-                    mastered_tags,
-                    weak_tags
-                )
+                # Save practice log：結果畫面在每次操作時都會重新執行，每次交卷只寫入一筆
+                if "practice_log_result" not in st.session_state:
+                    st.session_state.practice_log_result = logger_utils.log_unit_practice(
+                        student_info,
+                        current_unit["id"],
+                        current_unit["title"],
+                        score,
+                        total,
+                        mastered_tags,
+                        weak_tags
+                    )
+                status, log_saved = st.session_state.practice_log_result
 
                 st.divider()
                 st.markdown("### 📊 本次練習結果")
