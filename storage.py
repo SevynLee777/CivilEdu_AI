@@ -14,7 +14,7 @@ load_dotenv()
 
 UNITS_TABLE = "units"
 STUDENT_TABLE = "student_records"
-REQUEST_TIMEOUT = 15
+REQUEST_TIMEOUT = (5, 15)  # (連線, 讀取) 秒；資料庫暫停時才不會讓頁面等太久
 
 
 class StorageError(Exception):
@@ -64,6 +64,18 @@ def _request(method, table, **kwargs):
     if res.status_code >= 400:
         raise StorageError(f"Supabase {method} {table} 失敗（HTTP {res.status_code}）：{res.text[:300]}")
     return res
+
+
+def check_connection():
+    """檢查遠端資料庫是否可用：正常回傳 None，異常回傳錯誤說明。本地 JSON 模式一律回傳 None。"""
+    if not is_remote():
+        return None
+    try:
+        _request("GET", UNITS_TABLE, headers=_headers(), params={"select": "id", "limit": "1"})
+        return None
+    except StorageError as e:
+        print(f"[Error] {e}")
+        return str(e)
 
 
 def fetch_all(table):

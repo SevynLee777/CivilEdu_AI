@@ -80,6 +80,7 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
     - 🌳 已掌握 (pct >= 80%)
     - 🌿 再練習 (50% <= pct < 80%)
     - 🌱 再看看 (pct < 50%)
+    Returns (status, saved)；saved 為 False 代表這次紀錄沒有存到，呼叫端應提醒使用者。
     """
     record = _load_record_for_update(student_info)
     pct = (score / total * 100) if total > 0 else 0
@@ -93,7 +94,7 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
         status = "🌱 再看看"
 
     if record is None:
-        return status
+        return status, False
 
     if "unit_progress" not in record:
         record["unit_progress"] = {}
@@ -128,13 +129,13 @@ def log_unit_practice(student_info, unit_id, unit_title, score, total, mastered_
         "timestamp": now_str
     })
     
-    save_student_record(record)
-    return status
+    return status, save_student_record(record)
 
 def log_ai_chat(student_info, unit_title, question, answer):
+    """記錄 AI 對話，成功存到回傳 True。"""
     record = _load_record_for_update(student_info)
     if record is None:
-        return
+        return False
     if "ai_chats" not in record:
         record["ai_chats"] = []
     record["ai_chats"].append({
@@ -143,11 +144,14 @@ def log_ai_chat(student_info, unit_title, question, answer):
         "answer": answer,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
-    save_student_record(record)
+    return save_student_record(record)
 
 def get_student_footprint(student_info):
-    """Returns the student's personal learning footprints without any class rankings."""
-    record = _load_record_for_update(student_info) or {}
+    """Returns the student's personal learning footprints without any class rankings.
+    讀取失敗回傳 None，與「尚無紀錄」的空清單區分。"""
+    record = _load_record_for_update(student_info)
+    if record is None:
+        return None
     unit_progress = record.get("unit_progress", {})
     return list(unit_progress.values())
 

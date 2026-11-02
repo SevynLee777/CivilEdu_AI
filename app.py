@@ -3,6 +3,7 @@ import importlib
 import unit_manager
 import logger_utils
 import data_loader
+import storage
 import os
 import io
 import json
@@ -1203,7 +1204,7 @@ if is_student_ready:
                         weak_tags.append(tag)
 
                 # Save practice log
-                status = logger_utils.log_unit_practice(
+                status, log_saved = logger_utils.log_unit_practice(
                     student_info,
                     current_unit["id"],
                     current_unit["title"],
@@ -1215,6 +1216,9 @@ if is_student_ready:
 
                 st.divider()
                 st.markdown("### 📊 本次練習結果")
+
+                if not log_saved:
+                    st.warning("⚠️ 這次的紀錄沒有存到：學習紀錄系統暫時連不上。成績還是可以看，但不會出現在「我的足跡」，也請告訴老師。")
 
                 if status == "🌳 已掌握":
                     status_html = '<span class="badge-status-mastered" style="font-size: 1.3rem;">🌳 已掌握</span>'
@@ -1293,7 +1297,8 @@ if is_student_ready:
                 with st.spinner("AI 助教正在組織淺顯易懂的回答..."):
                     ans = unit_manager.ask_ai_tutor(q_user.strip(), current_unit['title'], current_unit.get('raw_content',''))
                     st.session_state.chat_history.append((q_user.strip(), ans))
-                    logger_utils.log_ai_chat(student_info, current_unit['title'], q_user.strip(), ans)
+                    if not logger_utils.log_ai_chat(student_info, current_unit['title'], q_user.strip(), ans):
+                        st.warning("⚠️ 這次的提問紀錄沒有存到：學習紀錄系統暫時連不上。AI 助教的回答不受影響。")
             else:
                 st.warning("請先輸入你的問題喔！")
 
@@ -1315,7 +1320,9 @@ if is_student_ready:
 
         footprints = logger_utils.get_student_footprint(student_info)
         
-        if not footprints:
+        if footprints is None:
+            st.warning("⚠️ 學習紀錄系統暫時連不上，目前讀不到你的足跡。你之前的紀錄沒有消失，請稍後再回來看，或告訴老師。")
+        elif not footprints:
             st.info("🌱 你尚未在任何單元進行「小試身手」。快挑選一個單元開始學習吧！")
         else:
             total_count = len(footprints)
@@ -1379,6 +1386,12 @@ elif is_teacher_ready:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    storage_error = storage.check_connection()
+    if storage_error:
+        st.error("🚨 資料庫連線異常：目前教材清單可能不完整，學生紀錄讀不到也存不進去，學習狀況顯示為空不代表沒有資料。"
+                 "若 Supabase 專案被暫停，請到 Supabase 後台按 Resume 恢復。")
+        st.caption(f"錯誤內容：{storage_error}")
 
     t_tab1, t_tab2 = st.tabs([
         "📚 我的教材",
