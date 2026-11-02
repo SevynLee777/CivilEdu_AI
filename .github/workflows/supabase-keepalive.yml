@@ -1,0 +1,33 @@
+# Supabase 免費專案在一週內資料庫活動太少時會被自動暫停，寒暑假特別容易發生。
+# 此排程每天查詢資料庫 3 次來維持活動；查詢失敗時工作會失敗，GitHub 會寄信通知，
+# 收到通知請到 Supabase 後台檢查專案是否被暫停。
+#
+# 這裡的金鑰是 publishable 金鑰，本來就可以公開：資料表開啟 RLS 且沒有 policy，
+# 用它查詢只會得到空結果，但查詢仍會實際進到資料庫。切勿在此放 secret 金鑰。
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "23 1,9,17 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_URL: https://kxaywaashtuifkvxbtrl.supabase.co
+  SUPABASE_PUBLISHABLE_KEY: sb_publishable_jDSdjhCwI11iqmCouIwv7Q_SeFoV_HC
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query Supabase tables
+        run: |
+          for table in units student_records; do
+            curl --fail --silent --show-error --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors \
+              "$SUPABASE_URL/rest/v1/$table?select=id&limit=1" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -o /dev/null
+            echo "$table OK"
+          done
