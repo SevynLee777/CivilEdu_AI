@@ -1,9 +1,11 @@
 import streamlit as st
 import importlib
+import threading
 import unit_manager
 import logger_utils
 import data_loader
 import storage
+import mindmap_view
 import os
 import io
 import json
@@ -18,6 +20,57 @@ try:
     importlib.reload(unit_manager)
 except Exception:
     pass
+
+def run_tutor_job(job, student_info, unit_title, unit_content):
+    """在背景執行緒回答提問並寫入紀錄。
+
+    回答要等 10～20 秒，切換分頁時 Streamlit 會立刻重新執行並放棄原本的執行，
+    所以不放在頁面流程裡等待。此函式不可呼叫 st.*。
+    """
+    try:
+        answer = unit_manager.ask_ai_tutor(job["question"], unit_title, unit_content)
+        if answer:
+            job["log_saved"] = logger_utils.log_ai_chat(student_info, unit_title, job["question"], answer)
+        job["answer"] = answer
+    finally:
+        job["done"] = True
+
+def queue_tutor_question(input_key, student_info, unit):
+    """送出提問：一次只處理一題，在背景開始回答。"""
+    question = st.session_state.get(input_key, "").strip()
+    current_job = st.session_state.get("tutor_job")
+    if question and not current_job:
+        job = {"unit_id": unit["id"], "question": question, "answer": None, "log_saved": True, "done": False}
+        st.session_state.tutor_job = job
+        threading.Thread(
+            target=run_tutor_job,
+            args=(job, student_info, unit["title"], unit.get("raw_content", "")),
+            daemon=True
+        ).start()
+
+@st.fragment(run_every=2)
+def show_tutor_progress():
+    """顯示 AI 助教回答中，完成後重新執行整頁以顯示回答。"""
+    job = st.session_state.get("tutor_job")
+    if job and job["done"]:
+        st.rerun()
+    if job:
+        st.info("💬 AI 助教正在組織回答，大約需要 20 秒。可以先看其他內容，完成後會出現在「問問AI助教」。")
+
+def collect_tutor_answer(unit_id):
+    """把完成的回答放進問答紀錄；回傳進行中的提問，沒有則回傳 None。"""
+    job = st.session_state.get("tutor_job")
+    if job and job["unit_id"] != unit_id:
+        job = st.session_state.tutor_job = None
+    if job and job["done"]:
+        if job["answer"]:
+            st.session_state.chat_history.append((job["question"], job["answer"]))
+            if not job["log_saved"]:
+                st.session_state.tutor_notice = "⚠️ 這次的提問紀錄沒有存到：學習紀錄系統暫時連不上。AI 助教的回答不受影響。"
+        else:
+            st.session_state.tutor_notice = "⚠️ AI 助教現在比較忙，這次沒有回答到。問題還留在輸入框，請稍後再按一次。"
+        st.session_state.tutor_job = job = None
+    return job
 
 def queue_unit_notice(level, message):
     """暫存教材管理的結果訊息，於 st.rerun() 後由 show_unit_notices() 顯示。level: success / warning / error"""
@@ -1060,6 +1113,10 @@ if is_student_ready:
     elif st.session_state.get("student_tab_selection") not in valid_student_tabs:
         st.session_state.student_tab_selection = valid_student_tabs[0]
 
+    tutor_job = collect_tutor_answer(current_unit["id"])
+    if tutor_job:
+        show_tutor_progress()
+
     tab_learn, tab_practice, tab_ai_tutor, tab_footprint = st.tabs(
         valid_student_tabs,
         key="student_tab_selection",
@@ -1097,7 +1154,7 @@ if is_student_ready:
             st.markdown("---")
             st.markdown("#### 🧠 核心觀念心智圖")
             formatted_mindmap = format_mindmap_mermaid(mindmap_mermaid)
-            st.markdown(f"```mermaid\n{formatted_mindmap}\n```")
+            st.iframe(mindmap_view.build_mindmap_html(formatted_mindmap), height=mindmap_view.MINDMAP_HEIGHT)
 
         # 4. 生活與校園情境案例
         life_cases = current_unit.get("life_cases", [])
@@ -1297,16 +1354,23 @@ if is_student_ready:
         st.markdown(f"### 💬 問問AI助教 — {current_unit['title']}")
         st.caption("對這堂課還有任何不懂的疑問嗎？隨時問 AI 助教，用校園日常生活幫你解惑！")
 
-        q_user = st.text_input("輸入你的問題（例如：為什麼主權對外要獨立？生活中有什麼例子？）：", key=f"chat_input_{current_unit['id']}")
-        if st.button("❓ 請 AI 老師解答", key=f"btn_ask_{current_unit['id']}", type="primary"):
-            if q_user.strip():
-                with st.spinner("AI 助教正在組織淺顯易懂的回答..."):
-                    ans = unit_manager.ask_ai_tutor(q_user.strip(), current_unit['title'], current_unit.get('raw_content',''))
-                    st.session_state.chat_history.append((q_user.strip(), ans))
-                    if not logger_utils.log_ai_chat(student_info, current_unit['title'], q_user.strip(), ans):
-                        st.warning("⚠️ 這次的提問紀錄沒有存到：學習紀錄系統暫時連不上。AI 助教的回答不受影響。")
-            else:
-                st.warning("請先輸入你的問題喔！")
+        chat_input_key = f"chat_input_{current_unit['id']}"
+        # 用表單讓問題與按鈕一起送出；回答中停用按鈕，避免重複提問
+        with st.form(f"ask_form_{current_unit['id']}"):
+            q_user = st.text_input("輸入你的問題（例如：為什麼主權對外要獨立？生活中有什麼例子？）：", key=chat_input_key)
+            asked = st.form_submit_button(
+                "❓ 請 AI 老師解答",
+                type="primary",
+                disabled=bool(tutor_job),
+                on_click=queue_tutor_question,
+                args=(chat_input_key, student_info, current_unit)
+            )
+        if asked and not q_user.strip():
+            st.warning("請先輸入你的問題喔！")
+
+        tutor_notice = st.session_state.pop("tutor_notice", None)
+        if tutor_notice:
+            st.warning(tutor_notice)
 
         if st.session_state.chat_history:
             st.markdown("---")

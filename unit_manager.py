@@ -44,12 +44,14 @@ def get_api_key():
             pass
     return key
 
-def call_gemini_api(prompt, is_json=False):
+def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300):
+    """呼叫 Gemini；attempt_timeout 為單次等待秒數，total_timeout 為含重試與換模型的總上限。"""
     api_key = get_api_key()
     if not api_key:
         raise ValueError("未設定 GEMINI_API_KEY，無法呼叫 Gemini API。")
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=attempt_timeout * 1000))
+    deadline = time.monotonic() + total_timeout
     errors = []
     config = types.GenerateContentConfig(
         response_mime_type="application/json"
@@ -57,6 +59,8 @@ def call_gemini_api(prompt, is_json=False):
 
     for m_name in CANDIDATE_MODELS:
         for attempt in range(MAX_ATTEMPTS_PER_MODEL):
+            if time.monotonic() > deadline:
+                raise Exception("等待 AI 回覆逾時：" + "；".join(errors))
             try:
                 res = client.models.generate_content(
                     model=m_name,
@@ -1576,7 +1580,7 @@ def delete_unit(unit_id):
     return True
 
 def ask_ai_tutor(question, unit_title, unit_content):
-    """Answers student questions using friendly plain analogies."""
+    """Answers student questions using friendly plain analogies. Returns None when AI is unavailable."""
     prompt = f"""
 你是一位親切、幽默且富有耐心的【國中八年級公民 AI 助教】。
 學生正在學習單元【{unit_title}】，提出了以下問題：
@@ -1590,6 +1594,7 @@ def ask_ai_tutor(question, unit_title, unit_content):
 3. 條列清晰，避免生硬死板的法律術語，讓國中生一秒看懂！
 """
     try:
-        return call_gemini_api(prompt)
+        return call_gemini_api(prompt, attempt_timeout=45, total_timeout=75)
     except Exception as e:
-        return f"AI 老師思考中，請稍後再試：{e}"
+        print(f"[Warning] AI tutor exception: {e}")
+        return None
