@@ -11,11 +11,13 @@ def ensure_log_dir():
         os.makedirs(LOG_DIR, exist_ok=True)
 
 def get_student_key(student_info):
-    """學生紀錄的識別碼：班級_座號_姓名（本地檔名與 Supabase 主鍵共用）。"""
+    """學生紀錄的識別碼：班級_座號（若有姓名則為 班級_座號_姓名，本地檔名與 Supabase 主鍵共用）。"""
     class_name = str(student_info.get("class_name", "801")).strip()
     seat_num = str(student_info.get("seat_num", "01")).strip()
-    name = str(student_info.get("name", "學生")).strip()
-    return f"{class_name}_{seat_num}_{name}"
+    name = str(student_info.get("name", "")).strip()
+    if name:
+        return f"{class_name}_{seat_num}_{name}"
+    return f"{class_name}_{seat_num}"
 
 def get_student_file_path(student_info):
     ensure_log_dir()
@@ -36,6 +38,20 @@ def load_student_record(student_info):
                     return json.load(f)
             except Exception as e:
                 print(f"[Error] Failed to read student log {filepath}: {e}")
+        else:
+            # 向後相容：若無 班級_座號.json，嘗試尋找同班級同座號的歷史檔案
+            class_name = str(student_info.get("class_name", "801")).strip()
+            seat_num = str(student_info.get("seat_num", "01")).strip()
+            ensure_log_dir()
+            prefix = f"{class_name}_{seat_num}_"
+            for fname in os.listdir(LOG_DIR):
+                if fname.startswith(prefix) and fname.endswith(".json"):
+                    candidate_path = os.path.join(LOG_DIR, fname)
+                    try:
+                        with open(candidate_path, "r", encoding="utf-8") as f:
+                            return json.load(f)
+                    except Exception as e:
+                        print(f"[Error] Failed to read candidate log {candidate_path}: {e}")
             
     return {
         "student_info": student_info,
@@ -213,7 +229,7 @@ def get_teacher_learning_summary():
         if not practiced_today and last_active.startswith(today_str) and unit_prog:
             practiced_today = True
             
-        student_key = f"{info.get('class_name','')}_{info.get('seat_num','')}_{info.get('name','')}"
+        student_key = get_student_key(info)
         if practiced_today:
             completed_today_students.add(student_key)
             

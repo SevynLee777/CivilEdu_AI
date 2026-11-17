@@ -186,7 +186,7 @@ st.set_page_config(
     page_title="國中公民思辨星系 ｜ AI 智慧自主學習館",
     page_icon="🌌",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 load_dotenv()
 TEACHER_PASSWORD = os.getenv("TEACHER_PASSWORD", "MCJH2026")
@@ -847,10 +847,8 @@ if "user_role" not in st.session_state:
     st.session_state.user_role = "none"  # "none", "student", or "teacher"
 if "is_teacher_authenticated" not in st.session_state:
     st.session_state.is_teacher_authenticated = False
-if "role_radio_key_version" not in st.session_state:
-    st.session_state.role_radio_key_version = 0
-if "teacher_modal_pwd" not in st.session_state:
-    st.session_state.teacher_modal_pwd = ""
+if "show_identity_dialog" not in st.session_state:
+    st.session_state.show_identity_dialog = True  # 首次載入自動彈出身分選擇視窗
 if "student_name" not in st.session_state:
     st.session_state.student_name = ""
 if "student_class" not in st.session_state:
@@ -871,35 +869,66 @@ if "student_tab_selection" not in st.session_state:
 def switch_to_practice_tab():
     st.session_state.student_tab_selection = "✏️ 小試身手"
 
-def on_auth_dismiss():
-    if not st.session_state.get("is_teacher_authenticated", False):
-        st.session_state.user_role = "none"
-        st.session_state.role_radio_key_version += 1
+def on_identity_dialog_dismiss():
+    st.session_state.show_identity_dialog = False
 
-@st.dialog("🔒 教師身分驗證", on_dismiss=on_auth_dismiss)
-def teacher_auth_dialog():
-    st.markdown("切換至 **👨‍🏫 教師管理端** 需要確認教師本人身分。<br>請輸入教師管理專屬密碼：", unsafe_allow_html=True)
-    with st.form("teacher_auth_modal_form", clear_on_submit=False):
-        pwd = st.text_input("教師密碼", type="password", key="teacher_modal_pwd", placeholder="請輸入教師密碼")
-        c1, c2 = st.columns(2)
-        with c1:
-            submit_btn = st.form_submit_button("🔑 確認驗證", type="primary", use_container_width=True)
-        with c2:
-            cancel_btn = st.form_submit_button("返回學生端", use_container_width=True)
+@st.dialog("🏛️ 請選擇操作身分", on_dismiss=on_identity_dialog_dismiss)
+def identity_dialog():
+    st.markdown("歡迎來到 **國中公民思辨星系**！<br>請選擇您的操作身分以開啟專屬學習與管理空間：", unsafe_allow_html=True)
+    
+    tab_student_role, tab_teacher_role = st.tabs(["🎓 我是學生", "👨‍🏫 我是老師"])
 
-        if submit_btn:
+    with tab_student_role:
+        st.markdown("#### 👤 學生基本資料")
+        st.caption("請選擇您的班級與座號（免填姓名，保護隱私）：")
+        class_options = [str(i) for i in range(801, 822)]
+        seat_options = [f"{i:02d}" for i in range(1, 31)]
+
+        col_c, col_s = st.columns(2)
+        with col_c:
+            selected_class = st.selectbox(
+                "班級",
+                class_options,
+                index=class_options.index(st.session_state.student_class) if st.session_state.student_class in class_options else 0,
+                key="dialog_student_class"
+            )
+        with col_s:
+            selected_seat = st.selectbox(
+                "座號",
+                seat_options,
+                index=seat_options.index(st.session_state.student_seat) if st.session_state.student_seat in seat_options else 0,
+                key="dialog_student_seat"
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 確認身分並開啟學習頁面", type="primary", use_container_width=True, key="dialog_confirm_student"):
+            st.session_state.user_role = "student"
+            st.session_state.student_class = selected_class
+            st.session_state.student_seat = selected_seat
+            st.session_state.is_teacher_authenticated = False
+            st.session_state.show_identity_dialog = False
+            if not st.session_state.current_unit_id and all_units:
+                st.session_state.current_unit_id = all_units[0]["id"]
+            st.session_state.practice_submitted = False
+            st.session_state.practice_answers = {}
+            st.session_state.chat_history = []
+            st.session_state.student_tab_selection = "📖 開始學習"
+            st.rerun()
+
+    with tab_teacher_role:
+        st.markdown("#### 👨‍🏫 教師管理端驗證")
+        st.caption("進入教師管理中心需要確認教師本人身分：")
+        pwd = st.text_input("教師管理專屬密碼", type="password", key="dialog_teacher_pwd", placeholder="請輸入教師密碼")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔑 驗證並進入教師管理端", type="primary", use_container_width=True, key="dialog_confirm_teacher"):
             if pwd == TEACHER_PASSWORD:
                 st.session_state.is_teacher_authenticated = True
                 st.session_state.user_role = "teacher"
-                st.session_state.practice_submitted = False
-                st.session_state.practice_answers = {}
-                st.success("✅ 身分驗證成功！正在進入教師端...")
+                st.session_state.show_identity_dialog = False
                 st.rerun()
             else:
                 st.error("❌ 密碼錯誤，請重新確認！")
-        elif cancel_btn:
-            on_auth_dismiss()
-            st.rerun()
 
 def format_mindmap_mermaid(raw_mermaid: str) -> str:
     if not raw_mermaid:
@@ -944,122 +973,45 @@ if not all_units:
     st.error("⚠️ 尚未載入任何學習單元，請由教師端新增教材。")
     st.stop()
 
-# --- Sidebar: Role & Student / Navigation ---
+# --- Floating Identity Dialog (Auto on entry or via switch button) ---
+if st.session_state.get("show_identity_dialog", False):
+    identity_dialog()
+
+# --- Sidebar: Minimal status & switch ---
 with st.sidebar:
-    st.markdown("### 🏛️ 身分切換")
-    role_options = ["請選擇操作身分...", "🎓 我是學生", "👨‍🏫 我是老師"]
-    cur_role_idx = 0
     if st.session_state.user_role == "student":
-        cur_role_idx = 1
-    elif st.session_state.user_role == "teacher":
-        cur_role_idx = 2
-
-    role_choice = st.radio(
-        "選擇操作身分",
-        role_options,
-        index=cur_role_idx,
-        key=f"role_radio_{st.session_state.role_radio_key_version}",
-        label_visibility="collapsed"
-    )
-
-    if "老師" in role_choice:
-        if not st.session_state.is_teacher_authenticated:
-            teacher_auth_dialog()
-        else:
-            st.session_state.user_role = "teacher"
-    elif "學生" in role_choice:
-        if st.session_state.user_role != "student":
-            st.session_state.user_role = "student"
-            st.session_state.is_teacher_authenticated = False
-            st.session_state.practice_submitted = False
-            st.session_state.practice_answers = {}
-            st.rerun()
-    else:
-        if st.session_state.user_role != "none":
-            st.session_state.user_role = "none"
-            st.session_state.is_teacher_authenticated = False
-            st.session_state.practice_submitted = False
-            st.session_state.practice_answers = {}
-            st.rerun()
-
-    st.markdown("---")
-
-    if st.session_state.user_role == "student":
-        st.markdown("### 👤 學生基本資料")
-        class_options = [str(i) for i in range(801, 822)]
-        seat_options = [f"{i:02d}" for i in range(1, 31)]
-
-        col_c, col_s = st.columns(2)
-        with col_c:
-            selected_class = st.selectbox("班級", class_options, index=class_options.index(st.session_state.student_class) if st.session_state.student_class in class_options else 0)
-        with col_s:
-            selected_seat = st.selectbox("座號", seat_options, index=seat_options.index(st.session_state.student_seat) if st.session_state.student_seat in seat_options else 0)
-        entered_name = st.text_input("姓名", value=st.session_state.student_name, placeholder="請輸入姓名，例如：王小明")
-        
-        st.session_state.student_class = selected_class
-        st.session_state.student_seat = selected_seat
-        st.session_state.student_name = entered_name.strip()
-
+        st.markdown("### 👤 目前身分")
+        st.write(f"**班級**：{st.session_state.student_class} 班")
+        st.write(f"**座號**：{st.session_state.student_seat} 號")
+        cur_u = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
+        if cur_u:
+            st.caption(f"📖 當前單元：{cur_u['title']}")
         st.markdown("---")
-        st.markdown("### 📚 選擇學習單元")
-        unit_titles = [u["title"] for u in all_units]
-        unit_options = ["-- 請選擇學習單元 --"] + unit_titles
-        
-        cur_unit = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
-        cur_idx = unit_options.index(cur_unit["title"]) if (cur_unit and cur_unit["title"] in unit_options) else 0
-        
-        selected_title = st.selectbox("選擇學習單元", unit_options, index=cur_idx, label_visibility="collapsed")
-        
-        # Check if changed
-        if selected_title == "-- 請選擇學習單元 --":
-            if st.session_state.current_unit_id is not None:
-                st.session_state.current_unit_id = None
-                st.session_state.practice_submitted = False
-                st.session_state.practice_answers = {}
-                st.session_state.chat_history = []
-                st.session_state.student_tab_selection = "📖 開始學習"
-                st.rerun()
-        else:
-            for u in all_units:
-                if u["title"] == selected_title and u["id"] != st.session_state.current_unit_id:
-                    st.session_state.current_unit_id = u["id"]
-                    st.session_state.practice_submitted = False
-                    st.session_state.practice_answers = {}
-                    st.session_state.chat_history = []
-                    st.session_state.student_tab_selection = "📖 開始學習"
-                    st.rerun()
-
-        # If student has filled in everything, show friendly return button
-        if st.session_state.student_name.strip() and (st.session_state.current_unit_id is not None):
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🔄 重新選定單元 / 返回導引", use_container_width=True):
-                st.session_state.current_unit_id = None
-                st.session_state.practice_submitted = False
-                st.session_state.practice_answers = {}
-                st.session_state.chat_history = []
-                st.session_state.student_tab_selection = "📖 開始學習"
-                st.rerun()
+        if st.button("🏛️ 切換操作身分", key="sidebar_switch_student", use_container_width=True):
+            st.session_state.show_identity_dialog = True
+            st.rerun()
 
     elif st.session_state.user_role == "teacher":
         st.markdown("### 👨‍🏫 教師管理功能")
-        st.info("教師只需新增教材與貼上課本內容，AI 自動為您萃取重點、生活案例、題目與補救指引！")
-        if st.button("🔒 登出教師 / 返回首頁", use_container_width=True):
+        st.info("已完成教師驗證，可於主畫面管理教材與檢視全班學習進度。")
+        st.markdown("---")
+        if st.button("🔒 登出教師 / 切換身分", key="sidebar_switch_teacher", use_container_width=True):
             st.session_state.user_role = "none"
             st.session_state.is_teacher_authenticated = False
-            st.session_state.role_radio_key_version += 1
-            st.session_state.practice_submitted = False
-            st.session_state.practice_answers = {}
-            st.session_state.student_tab_selection = "📖 開始學習"
+            st.session_state.show_identity_dialog = True
             st.rerun()
     else:
-        st.info("👈 請先於上方選擇您的身分（我是學生 或 我是老師）以開啟功能。")
+        st.markdown("### 🏛️ 操作身分")
+        st.info("尚未選定操作身分。")
+        if st.button("🏛️ 開啟身分選擇視窗", key="sidebar_open_modal", type="primary", use_container_width=True):
+            st.session_state.show_identity_dialog = True
+            st.rerun()
 
 # ══════════════════════════════════════════════
 # 🏛️ 主畫面渲染路由 (Main Content Routing)
 # ══════════════════════════════════════════════
 is_student_ready = (
     st.session_state.user_role == "student"
-    and bool(st.session_state.student_name.strip())
     and (st.session_state.current_unit_id is not None)
 )
 is_teacher_ready = (
@@ -1071,10 +1023,45 @@ if is_student_ready:
     student_info = {
         "class_name": st.session_state.student_class,
         "seat_num": st.session_state.student_seat,
-        "name": st.session_state.student_name or "同學"
+        "name": st.session_state.student_name.strip() if st.session_state.get("student_name") else ""
     }
 
     current_unit = unit_manager.get_unit(st.session_state.current_unit_id) or all_units[0]
+
+    student_label = f"{student_info['class_name']} 班 {student_info['seat_num']} 號"
+    if student_info.get("name"):
+        student_label += f" {student_info['name']}"
+
+    # ── 主頁欄位上方：選擇學習單元與身分切換控制列 ──
+    col_unit_sel, col_switch_btn = st.columns([4, 1.2])
+    with col_unit_sel:
+        unit_titles = [u["title"] for u in all_units]
+        cur_u_idx = 0
+        for idx, u in enumerate(all_units):
+            if u["id"] == current_unit["id"]:
+                cur_u_idx = idx
+                break
+        selected_unit_title = st.selectbox(
+            "📚 選擇學習單元",
+            unit_titles,
+            index=cur_u_idx,
+            help="由此切換想學習或練習的公民課程單元"
+        )
+        if selected_unit_title != current_unit["title"]:
+            for u in all_units:
+                if u["title"] == selected_unit_title:
+                    st.session_state.current_unit_id = u["id"]
+                    st.session_state.practice_submitted = False
+                    st.session_state.practice_answers = {}
+                    st.session_state.chat_history = []
+                    st.session_state.student_tab_selection = "📖 開始學習"
+                    st.rerun()
+
+    with col_switch_btn:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🏛️ 切換身分", use_container_width=True, help="點擊重新選擇班級座號或切換至教師端"):
+            st.session_state.show_identity_dialog = True
+            st.rerun()
 
     # Top Galaxy Banner
     st.markdown(f"""
@@ -1090,7 +1077,7 @@ if is_student_ready:
             </div>
             <div class="pulse-status">
                 <span class="pulse-dot"></span>
-                <span>星軌運行中 ｜ 👤 {student_info['class_name']} 班 {student_info['seat_num']} 號 {student_info['name']}</span>
+                <span>星軌運行中 ｜ 👤 {student_label}</span>
             </div>
         </div>
         <div style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
@@ -1444,18 +1431,27 @@ if is_student_ready:
 # 👨‍🏫 教師端 (Teacher Portal)
 # ══════════════════════════════════════════════
 elif is_teacher_ready:
-    st.markdown("""
-    <div class="galaxy-header">
-        <p class="eyebrow">TEACHER OBSERVATORY & CURRICULUM MANAGEMENT</p>
-        <div style="display: flex; align-items: center; gap: 0.9rem;">
-            <span class="brand-mark">師</span>
-            <div>
-                <h1 style="margin: 0; font-size: var(--fluid-h1); font-weight: 700;">教師星系觀測中心</h1>
-                <p style="margin: 0.2rem 0 0 0; font-size: var(--fluid-sub); color: #8ba5be; letter-spacing: 0.05em;">教材單元智能萃取 · 全班學習航跡總覽 · AI 適性化支援</p>
+    col_t_header, col_t_logout = st.columns([4, 1.2])
+    with col_t_header:
+        st.markdown("""
+        <div class="galaxy-header" style="margin-bottom: 0.5rem;">
+            <p class="eyebrow">TEACHER OBSERVATORY & CURRICULUM MANAGEMENT</p>
+            <div style="display: flex; align-items: center; gap: 0.9rem;">
+                <span class="brand-mark">師</span>
+                <div>
+                    <h1 style="margin: 0; font-size: var(--fluid-h1); font-weight: 700;">教師星系觀測中心</h1>
+                    <p style="margin: 0.2rem 0 0 0; font-size: var(--fluid-sub); color: #8ba5be; letter-spacing: 0.05em;">教材單元智能萃取 · 全班學習航跡總覽 · AI 適性化支援</p>
+                </div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    with col_t_logout:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🔒 登出 / 切換身分", key="teacher_top_logout", use_container_width=True):
+            st.session_state.user_role = "none"
+            st.session_state.is_teacher_authenticated = False
+            st.session_state.show_identity_dialog = True
+            st.rerun()
 
     storage_error = storage.check_connection()
     if storage_error:
@@ -1705,7 +1701,8 @@ elif is_teacher_ready:
 
                 weaks_display = f"<span style='color: #f87171;'>{', '.join(s_weaks)}</span>" if s_weaks else "<span style='color: #4ade80;'>無（掌握良好）</span>"
 
-                with st.expander(f"👤 {s_class} 班 {s_seat} 號 — {s_name}（已練習 {len(s_prog)} 個單元，共 {s_practices} 次）"):
+                name_suffix = f" — {s_name}" if s_name else ""
+                with st.expander(f"👤 {s_class} 班 {s_seat} 號{name_suffix}（已練習 {len(s_prog)} 個單元，共 {s_practices} 次）"):
                     st.markdown(f"**尚未完全理解的學習重點**：{weaks_display}", unsafe_allow_html=True)
                     st.markdown(f"**最後學習時間**：`{s.get('last_active','')}`")
                     
@@ -1748,25 +1745,26 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # 🚀 加大強調「航行準備中 ｜ 請先完成左欄資料登記」
+    # 🚀 加大強調「航行準備中 ｜ 請先選擇操作身分」
     st.markdown("""
     <div style="background: rgba(22, 46, 82, 0.85); border: 2.5px solid #f4d38b; border-radius: 18px; padding: 2.2rem 2.5rem; margin: 1.5rem 0 2rem 0; text-align: center; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(244, 211, 139, 0.15);">
         <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.9rem; margin-bottom: 0.8rem;">
             <span class="pulse-dot" style="width: 0.85rem; height: 0.85rem; background: #f4d38b; box-shadow: 0 0 14px #f4d38b;"></span>
             <h2 style="margin: 0; font-family: var(--font-serif); font-size: var(--fluid-h2); font-weight: 900; color: #ffffff; letter-spacing: 0.04em;">
-                航行準備中 ｜ 請先完成左欄資料登記
+                航行準備中 ｜ 請先選擇操作身分
             </h2>
         </div>
-        <p style="margin: 0.4rem 0 0 0; font-size: clamp(1.08rem, 0.4vw + 1rem, 1.25rem); color: #f4d38b; font-weight: 700; letter-spacing: 0.04em;">
-            👈 請由左側邊欄選定操作身分、填寫班級座號姓名並挑選學習單元，即可立即啟航開展學習！
+        <p style="margin: 0.4rem 0 1.2rem 0; font-size: clamp(1.08rem, 0.4vw + 1rem, 1.25rem); color: #f4d38b; font-weight: 700; letter-spacing: 0.04em;">
+            請點選下方按鈕開啟浮動視窗選擇身分，選定後便立即開啟完整學習頁面！
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.session_state.user_role == "teacher" and not st.session_state.is_teacher_authenticated:
-        st.warning("🔒 **教師身分確認**：進入教師管理端需要驗證教師專屬密碼。")
-        if st.button("🔑 開啟教師密碼驗證視窗", type="primary"):
-            teacher_auth_dialog()
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        if st.button("🏛️ 點擊開啟身分選擇視窗", key="btn_welcome_open_identity", type="primary", use_container_width=True):
+            st.session_state.show_identity_dialog = True
+            st.rerun()
 
     # 🌟 星系特色功能導覽（精簡版）
     st.markdown("""

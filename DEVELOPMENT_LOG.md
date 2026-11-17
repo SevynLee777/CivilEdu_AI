@@ -239,6 +239,23 @@
   * **Streamlit Cloud 熱重載與例外安全機制**：在 `app.py` 頂部加入模組 reload，並實作 `safe_extract_text_from_file_upload` 與 `safe_randomize_practice_questions` 本地雙重備援，防止雲端熱部署快取導致 `AttributeError`。
   * **標籤頁精簡改名「問問AI助教」**：原「💬 公民 AI 助教隨身問」精簡改名為「💬 問問AI助教」，大幅精簡字元寬度，有效避免窄螢幕與手機端標籤列擠壓折行，並支援 Session State 平滑相容過渡。
 
+* **階段 26～31：Supabase 雲端資料庫支援、AI 助教背景非同步應答、行動端互動心智圖、交卷單次防灌水、GitHub Actions 保活與架構圖拆分（2026-11-10）**：
+  * **Supabase 雲端持久化儲存層 (`storage.py`, `docs/supabase_setup.sql`)**：新增 PostgreSQL REST API 資料存取層與 RLS 安全策略，解決 Streamlit Cloud 容器重啟後教材與學生日誌遺失問題；自動切換本地 JSON 與雲端模式。
+  * **AI 助教背景非同步常駐執行緒 (`app.py`)**：將學生提問改由 Daemon Thread 處理，搭配 `@st.fragment(run_every=2)` 局部輪詢，徹底解決等待時切換分頁導致回答遺失與畫面白等問題。
+  * **行動端手勢縮放/拖曳互動心智圖 (`mindmap_view.py`)**：封裝獨立心智圖檢視元件，基於 HTML5 Pointer Events 支援雙指捏合縮放 (Pinch-to-zoom)、單指放大後平移拖曳 (Pan)、桌面 Ctrl+滾輪縮放與右上角按鈕控制；嚴格啟用 Mermaid strict 模式防止 XSS。
+  * **AI 生成品質檢核與 Word 表格解析 (`unit_manager.py`)**：讀取 `.docx` 時依序納入表格文字；自動檢查題目標籤補強內容完整性並進行二次補生成；提示詞限縮心智圖為樹狀且 15 節點以內。
+  * **交卷單次寫入防灌水與連線狀態安全防護 (`app.py`, `logger_utils.py`, `storage.py`)**：測驗交卷結果快取化，防止畫面重複刷新導致次數與歷程灌水；資料庫斷線時提供精準告警，不誤顯示「尚未練習」。
+  * **GitHub Actions 定時保活與流程圖升級 (`.github/workflows/supabase-keepalive.yml`, `docs/`)**：每日定時 3 次排程查詢防 Supabase 免費層休眠；拆分 README 龐大流程圖為系統總覽、學生端、教師端三張精簡圖與系統架構圖（.mmd, .png, .svg）。
+
+
+### 🔹 階段 32：身分選擇浮動視窗化、學生免填姓名隱私保護與主頁頂部單元控制列 (2026-11-17)
+* **核心調整**：
+  1. **免填姓名**：去除身分詢問中的「姓名」欄位，學生僅需選擇班級與座號，保護校園隱私並提升操作流暢度。
+  2. **浮動視窗化**：將原本擠在側邊欄的身分登記與驗證改為 `@st.dialog` 原生浮動視窗，使用者登入時即時彈出進行選擇，首頁側邊欄預設收合不佔據首頁空間。
+  3. **主頁頂部單元控制列**：將「📚 選擇學習單元」移至主頁面正上方，搭配「🏛️ 切換身分」快速按鈕，直覺切換學習單元。
+  4. **完成選定即刻啟航**：身分確認後系統自動載入第一單元並直接解鎖四大核心模組（📖 開始學習、✏️ 小試身手、💬 問問AI助教、🌱 我的足跡）。
+  5. **歷程鍵值向後相容**：`logger_utils.py` 之 `get_student_key` 調整為 `班級_座號`，並在讀取時自動相容既有歷史紀錄檔案。
+* **相關檔案**：[`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)、[`logger_utils.py`](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py)、[`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md)、[`DEVELOPMENT_LOG_20261117.md`](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261117.md)。
 
 ---
 
@@ -246,9 +263,14 @@
 
 | 檔案/資料夾名稱 | 類型 | 說明 |
 | :--- | :--- | :--- |
-| [app.py](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | Streamlit 介面（公民思辨星系版，學生端/教師端雙獨立流程） |
+| [app.py](file:///C:/Users/awen8/CivilEdu_AI/app.py) | Python 主程式 | Streamlit 介面（公民思辨星系版，學生端/教師端雙獨立流程，含背景執行緒非同步應答與身分浮動視窗） |
+| [mindmap_view.py](file:///C:/Users/awen8/CivilEdu_AI/mindmap_view.py) | 視覺模組 | 可縮放拖曳互動心智圖檢視元件（支援手機雙指手勢與桌面按鈕） |
+| [storage.py](file:///C:/Users/awen8/CivilEdu_AI/storage.py) | 資料層 | 支援 Supabase PostgreSQL 雲端儲存與本機 JSON 雙模切換 |
 | [unit_manager.py](file:///C:/Users/awen8/CivilEdu_AI/unit_manager.py) | 核心模組 | 學習單元管理、檔案解析、隨機抽題、AI 自動分析與生成重點/案例/題目/補救 |
-| [logger_utils.py](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成 |
+| [logger_utils.py](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) | 歷程模組 | 學生學習足跡紀錄、教師摘要統計與 CSV 報表生成（支援免姓名鍵值與向後相容） |
+| [docs/supabase_setup.sql](file:///C:/Users/awen8/CivilEdu_AI/docs/supabase_setup.sql) | 資料庫腳本 | Supabase 資料表建置與 RLS 安全策略 SQL 檔 |
+| [.github/workflows/supabase-keepalive.yml](file:///C:/Users/awen8/CivilEdu_AI/.github/workflows/supabase-keepalive.yml) | 自動化 CI/CD | 每天定時 3 次自動查詢 Supabase 保持專案活躍 |
+| [docs/](file:///C:/Users/awen8/CivilEdu_AI/docs/) | 文件圖資 | 系統架構圖與三張精簡版操作流程圖（.mmd, .png, .svg） |
 | [units_db.json](file:///C:/Users/awen8/CivilEdu_AI/units_db.json) | 資料庫 | 系統學習單元資料庫（含重點、4 則生活案例、16 題題庫池、心智圖） |
 | [config.json](file:///C:/Users/awen8/CivilEdu_AI/config.json) | 設定檔 | 設定國中八年級公民科目名稱與 AI 助教角色 |
 | [student_logs/](file:///C:/Users/awen8/CivilEdu_AI/student_logs) | 資料夾 | 學生個人學習歷程 JSON 日誌 |
@@ -258,8 +280,10 @@
 | [DEVELOPMENT_LOG_20261003.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261003.md) | 文件 | 2026-10-03 本日開發紀錄檔 |
 | [DEVELOPMENT_LOG_20261004.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261004.md) | 文件 | 2026-10-04 本日完整開發紀錄檔（階段 19～24） |
 | [DEVELOPMENT_LOG_20261010.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261010.md) | 文件 | 2026-10-10 本日完整開發紀錄檔（階段 25） |
+| [DEVELOPMENT_LOG_20261110.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261110.md) | 文件 | 2026-11-10 本日完整開發紀錄檔（階段 26～31） |
+| [DEVELOPMENT_LOG_20261117.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG_20261117.md) | 文件 | **(新增)** 2026-11-17 本日完整開發紀錄檔（階段 32） |
 | [DEVELOPMENT_LOG.md](file:///C:/Users/awen8/CivilEdu_AI/DEVELOPMENT_LOG.md) | 文件 | 本開發歷程主紀錄檔 |
-| [README.md](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 文件 | 專案說明文件（含系統分析與 Mermaid 網站流程圖） |
+| [README.md](file:///C:/Users/awen8/CivilEdu_AI/README.md) | 文件 | 專案說明文件（含系統分析與三張精簡流程圖） |
 
 ---
 
