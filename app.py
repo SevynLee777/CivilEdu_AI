@@ -274,11 +274,93 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    button[data-testid="baseButton-secondary"],
+    /* ══════════════════════════════════════════════════════════════════════
+       主要與次要按鈕顯著化樣式 — 確保常態即清晰可見，拒絕幽靈按鈕
+       ══════════════════════════════════════════════════════════════════════ */
     button[data-testid="baseButton-primary"],
-    .stButton button {
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%) !important;
+        color: #ffffff !important;
+        border: 1.5px solid rgba(147, 197, 253, 0.55) !important;
+        border-radius: 12px !important;
+        padding: 0.65rem 1.4rem !important;
+        font-size: var(--fluid-body) !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), 0 0 16px rgba(2, 132, 199, 0.25) !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        cursor: pointer !important;
+    }
+
+    button[data-testid="baseButton-primary"] p,
+    button[data-testid="baseButton-primary"] span,
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    button[data-testid="baseButton-primary"]:hover,
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #38bdf8 100%) !important;
+        border-color: #93c5fd !important;
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6), 0 0 24px rgba(56, 189, 248, 0.45) !important;
+        transform: translateY(-1.5px) !important;
+    }
+
+    button[data-testid="baseButton-secondary"],
+    .stButton > button[kind="secondary"] {
+        background: rgba(30, 41, 59, 0.9) !important;
+        color: #f1f5f9 !important;
+        border: 1.5px solid rgba(148, 163, 184, 0.4) !important;
+        border-radius: 10px !important;
+        padding: 0.58rem 1.2rem !important;
         font-size: var(--fluid-body) !important;
         font-weight: 600 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+    }
+
+    button[data-testid="baseButton-secondary"] p,
+    button[data-testid="baseButton-secondary"] span,
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span {
+        color: #f1f5f9 !important;
+        font-weight: 600 !important;
+    }
+
+    button[data-testid="baseButton-secondary"]:hover,
+    .stButton > button[kind="secondary"]:hover {
+        background: rgba(51, 65, 85, 0.95) !important;
+        border-color: rgba(56, 189, 248, 0.7) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 醒目主行動按鈕 */
+    div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
+    div[role="dialog"] button[data-testid="baseButton-primary"],
+    div[data-testid="stModal"] button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%) !important;
+        border: 2px solid #7dd3fc !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 1.6rem !important;
+        min-height: 48px !important;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55), 0 0 22px rgba(56, 189, 248, 0.4) !important;
+    }
+
+    div[data-testid="stDialog"] button[data-testid="baseButton-primary"] p,
+    div[data-testid="stDialog"] button[data-testid="baseButton-primary"] span,
+    div[role="dialog"] button[data-testid="baseButton-primary"] p,
+    div[role="dialog"] button[data-testid="baseButton-primary"] span,
+    div[data-testid="stModal"] button[data-testid="baseButton-primary"] p,
+    div[data-testid="stModal"] button[data-testid="baseButton-primary"] span {
+        color: #ffffff !important;
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.03em !important;
     }
 
     div[data-testid="stAlert"] div, div[data-testid="stAlert"] p {
@@ -511,11 +593,12 @@ st.markdown("""
         border: none !important;
     }
 
-    /* 頁籤本體（經典膠囊標籤頁樣式） */
-    div[data-testid="stTabs"] [data-testid="stTab"],
-    div[data-testid="stTabs"] [role="tab"],
-    div[data-testid="stTabs"] .react-aria-Tab,
-    div[data-testid="stTabs"] button,
+    /* 頁籤本體（經典膠囊標籤頁樣式，僅針對頂部 tablist 中的標籤按鈕，不干擾分頁內容中的動作按鈕） */
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"],
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"],
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab,
+    div[data-testid="stTabs"] [role="tablist"] button,
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button,
     button[data-baseweb="tab"] {
         background-color: transparent !important;
         border: 1px solid transparent !important;
@@ -528,23 +611,26 @@ st.markdown("""
         cursor: pointer !important;
     }
 
-    div[data-testid="stTabs"] [data-testid="stTab"]:hover,
-    div[data-testid="stTabs"] [role="tab"]:hover,
-    div[data-testid="stTabs"] .react-aria-Tab:hover,
-    div[data-testid="stTabs"] button:hover {
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"]:hover,
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"]:hover,
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab:hover,
+    div[data-testid="stTabs"] [role="tablist"] button:hover,
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button:hover {
         background: rgba(208, 224, 238, 0.08) !important;
         border-color: rgba(150, 192, 230, 0.3) !important;
     }
 
-    /* 頁籤文字：加大字級，清晰舒適 */
-    div[data-testid="stTabs"] [data-testid="stTab"],
-    div[data-testid="stTabs"] [data-testid="stTab"] *,
-    div[data-testid="stTabs"] [role="tab"],
-    div[data-testid="stTabs"] [role="tab"] *,
-    div[data-testid="stTabs"] .react-aria-Tab,
-    div[data-testid="stTabs"] .react-aria-Tab *,
-    div[data-testid="stTabs"] button p,
-    div[data-testid="stTabs"] button span,
+    /* 頁籤文字：加大字級，清晰舒適（僅限頁籤標題文字） */
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"],
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"] *,
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"],
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"] *,
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab,
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab *,
+    div[data-testid="stTabs"] [role="tablist"] button p,
+    div[data-testid="stTabs"] [role="tablist"] button span,
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button p,
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button span,
     button[data-baseweb="tab"] p,
     button[data-baseweb="tab"] span {
         color: var(--galaxy-paper-muted) !important;
@@ -555,8 +641,7 @@ st.markdown("""
         line-height: 1.4 !important;
     }
 
-    /* 上面的 button span 規則也會套到分頁內的一般按鈕（例如檔案上傳鈕），
-       需還原 Material 圖示字型，否則圖示會顯示成文字（如 uploadupload 重疊） */
+    /* 還原 Material 圖示字型，確保圖示正確呈現 */
     div[data-testid="stTabs"] [data-testid="stIconMaterial"] {
         font-family: "Material Symbols Rounded" !important;
         font-weight: 400 !important;
@@ -564,26 +649,28 @@ st.markdown("""
     }
 
     /* 選中標籤頁（經典金黃下標線與微柔光底色） */
-    div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"],
-    div[data-testid="stTabs"] [data-testid="stTab"][data-selected="true"],
-    div[data-testid="stTabs"] [data-testid="stTab"][data-selected],
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] [role="tab"][data-selected],
-    div[data-testid="stTabs"] .react-aria-Tab[data-selected],
-    div[data-testid="stTabs"] button[aria-selected="true"],
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][aria-selected="true"],
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][data-selected="true"],
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][data-selected],
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"][data-selected],
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab[data-selected],
+    div[data-testid="stTabs"] [role="tablist"] button[aria-selected="true"],
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button[aria-selected="true"],
     button[data-baseweb="tab"][aria-selected="true"] {
         background: rgba(208, 224, 238, 0.1) !important;
         border: 1px solid var(--galaxy-line) !important;
         border-bottom: 3px solid var(--galaxy-amber) !important;
     }
 
-    div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] *,
-    div[data-testid="stTabs"] [data-testid="stTab"][data-selected="true"] *,
-    div[data-testid="stTabs"] [data-testid="stTab"][data-selected] *,
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] *,
-    div[data-testid="stTabs"] [role="tab"][data-selected] *,
-    div[data-testid="stTabs"] .react-aria-Tab[data-selected] *,
-    div[data-testid="stTabs"] button[aria-selected="true"] *,
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][data-selected="true"] *,
+    div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"][data-selected] *,
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] [role="tablist"] [role="tab"][data-selected] *,
+    div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab[data-selected] *,
+    div[data-testid="stTabs"] [role="tablist"] button[aria-selected="true"] *,
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"] button[aria-selected="true"] *,
     button[data-baseweb="tab"][aria-selected="true"] * {
         color: var(--galaxy-amber) !important;
         font-weight: 700 !important;
@@ -718,6 +805,16 @@ st.markdown("""
         stroke: var(--galaxy-amber) !important;
     }
 
+    /* 避免 Streamlit 原生頂部 Header 遮蔽內容或阻擋操作 */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        pointer-events: none !important;
+    }
+
+    header[data-testid="stHeader"] * {
+        pointer-events: auto !important;
+    }
+
     /* 完全移除/隱藏左側邊欄與展開控制鈕，100% 釋放完整學習頁面空間 */
     [data-testid="stSidebar"],
     [data-testid="stSidebarCollapsedControl"],
@@ -731,13 +828,22 @@ st.markdown("""
         pointer-events: none !important;
     }
 
-    /* 主學習頁面自適應全屏佈局，移除任何側邊欄位留白 */
+    /* 主學習頁面自適應全屏佈局，頂部預留 4.8rem 安全空間徹底避免「📚 選擇學習單元」被遮蔽 */
     .block-container {
-        padding-top: 1.8rem !important;
+        padding-top: 4.8rem !important;
         padding-bottom: 3.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
         max-width: 100% !important;
+    }
+
+    /* 頂部單元選單標籤文字強調與微距優化 */
+    div[data-testid="stSelectbox"] label p {
+        font-size: 1.12rem !important;
+        font-weight: 700 !important;
+        color: #f8fafc !important;
+        letter-spacing: 0.02em !important;
+        margin-bottom: 0.25rem !important;
     }
 
     /* BaseWeb 下拉選單浮動層 (Popover / Menu) 視覺與高度優化 */
@@ -761,6 +867,11 @@ st.markdown("""
         :root {
             font-size: 15.5px !important;
         }
+        .block-container {
+            padding-top: 4.2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
         .galaxy-header {
             padding: 1.2rem 1.4rem !important;
         }
@@ -776,19 +887,21 @@ st.markdown("""
             height: 2.3rem !important;
             font-size: 1.2rem !important;
         }
-        div[data-testid="stTabs"] [data-testid="stTab"],
-        div[data-testid="stTabs"] [role="tab"],
-        div[data-testid="stTabs"] .react-aria-Tab,
-        div[data-testid="stTabs"] button,
+        div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"],
+        div[data-testid="stTabs"] [role="tablist"] [role="tab"],
+        div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab,
+        div[data-testid="stTabs"] [role="tablist"] button,
+        div[data-testid="stTabs"] div[data-baseweb="tab-list"] button,
         button[data-baseweb="tab"] {
             padding: 0.55rem 1.15rem !important;
             border-radius: 999px !important;
             min-height: 40px !important;
         }
-        div[data-testid="stTabs"] [data-testid="stTab"] *,
-        div[data-testid="stTabs"] [role="tab"] *,
-        div[data-testid="stTabs"] .react-aria-Tab *,
-        div[data-testid="stTabs"] button * {
+        div[data-testid="stTabs"] [role="tablist"] [data-testid="stTab"] *,
+        div[data-testid="stTabs"] [role="tablist"] [role="tab"] *,
+        div[data-testid="stTabs"] [role="tablist"] .react-aria-Tab *,
+        div[data-testid="stTabs"] [role="tablist"] button *,
+        div[data-testid="stTabs"] div[data-baseweb="tab-list"] button * {
             font-size: 1.12rem !important;
             font-weight: 600 !important;
         }
@@ -855,7 +968,7 @@ def identity_dialog():
 
     with tab_student_role:
         st.markdown("#### 👤 學生基本資料")
-        st.caption("請選擇您的班級與座號（免填姓名，保護隱私）：")
+        st.caption("請選擇您的班級與座號：")
         class_options = [str(i) for i in range(801, 822)]
         seat_options = [f"{i:02d}" for i in range(1, 31)]
 
@@ -978,7 +1091,7 @@ if is_student_ready:
         student_label += f" {student_info['name']}"
 
     # ── 主頁欄位上方：選擇學習單元與身分切換控制列 ──
-    col_unit_sel, col_switch_btn = st.columns([4, 1.2])
+    col_unit_sel, col_switch_btn = st.columns([4.2, 1.3], vertical_alignment="bottom")
     with col_unit_sel:
         unit_titles = [u["title"] for u in all_units]
         cur_u_idx = 0
@@ -1003,7 +1116,6 @@ if is_student_ready:
                     st.rerun()
 
     with col_switch_btn:
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         if st.button("🏛️ 切換身分", use_container_width=True, help="點擊重新選擇班級座號或切換至教師端"):
             st.session_state.show_identity_dialog = True
             st.rerun()
@@ -1376,7 +1488,7 @@ if is_student_ready:
 # 👨‍🏫 教師端 (Teacher Portal)
 # ══════════════════════════════════════════════
 elif is_teacher_ready:
-    col_t_header, col_t_logout = st.columns([4, 1.2])
+    col_t_header, col_t_logout = st.columns([4, 1.2], vertical_alignment="bottom")
     with col_t_header:
         st.markdown("""
         <div class="galaxy-header" style="margin-bottom: 0.5rem;">
@@ -1391,7 +1503,6 @@ elif is_teacher_ready:
         </div>
         """, unsafe_allow_html=True)
     with col_t_logout:
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         if st.button("🔒 登出 / 切換身分", key="teacher_top_logout", use_container_width=True):
             st.session_state.user_role = "none"
             st.session_state.is_teacher_authenticated = False
