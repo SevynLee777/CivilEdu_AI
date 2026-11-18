@@ -339,16 +339,18 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
-    /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 醒目主行動按鈕 */
+    /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 醒目主行動按鈕，字級與頁籤完全一致且絕不折行 */
     div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
     div[role="dialog"] button[data-testid="baseButton-primary"],
     div[data-testid="stModal"] button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%) !important;
         border: 2px solid #7dd3fc !important;
         border-radius: 12px !important;
-        padding: 0.75rem 1.6rem !important;
-        min-height: 48px !important;
+        padding: 0.72rem 1.2rem !important;
+        min-height: 52px !important;
         box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55), 0 0 22px rgba(56, 189, 248, 0.4) !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
     }
 
     div[data-testid="stDialog"] button[data-testid="baseButton-primary"] p,
@@ -358,9 +360,13 @@ st.markdown("""
     div[data-testid="stModal"] button[data-testid="baseButton-primary"] p,
     div[data-testid="stModal"] button[data-testid="baseButton-primary"] span {
         color: #ffffff !important;
-        font-size: 1.15rem !important;
+        font-family: var(--font-sans) !important;
+        font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
         font-weight: 700 !important;
-        letter-spacing: 0.03em !important;
+        letter-spacing: 0.02em !important;
+        line-height: 1.4 !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
     }
 
     div[data-testid="stAlert"] div, div[data-testid="stAlert"] p {
@@ -905,6 +911,19 @@ st.markdown("""
             font-size: 1.12rem !important;
             font-weight: 600 !important;
         }
+        div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
+        div[role="dialog"] button[data-testid="baseButton-primary"] {
+            padding: 0.6rem 0.6rem !important;
+            white-space: nowrap !important;
+        }
+        div[data-testid="stDialog"] button[data-testid="baseButton-primary"] p,
+        div[data-testid="stDialog"] button[data-testid="baseButton-primary"] span,
+        div[role="dialog"] button[data-testid="baseButton-primary"] p,
+        div[role="dialog"] button[data-testid="baseButton-primary"] span {
+            font-size: 1.12rem !important;
+            white-space: nowrap !important;
+            letter-spacing: normal !important;
+        }
     }
 
     @media (min-width: 641px) and (max-width: 1024px) {
@@ -960,7 +979,7 @@ def switch_to_practice_tab():
 def on_identity_dialog_dismiss():
     st.session_state.show_identity_dialog = False
 
-@st.dialog("🏛️ 請選擇操作身分", on_dismiss=on_identity_dialog_dismiss)
+@st.dialog("🏛️ 請選擇操作身分", width="medium", on_dismiss=on_identity_dialog_dismiss)
 def identity_dialog():
     st.markdown("歡迎來到 **國中公民思辨星系**！<br>請選擇您的操作身分以開啟專屬學習與管理空間：", unsafe_allow_html=True)
     
