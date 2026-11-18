@@ -378,21 +378,11 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
-    /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 醒目主行動按鈕，字級與頁籤完全一致且絕不折行 */
-    div[data-testid="stDialog"] button,
-    div[role="dialog"] button,
-    div[data-baseweb="modal"] button,
-    div[data-testid="stModal"] button,
-    div[data-testid="stDialog"] button[data-testid="stBaseButton-primary"],
-    div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
-    div[data-testid="stDialog"] button[kind="primary"],
-    div[role="dialog"] button[data-testid="stBaseButton-primary"],
-    div[role="dialog"] button[data-testid="baseButton-primary"],
-    div[role="dialog"] button[kind="primary"],
-    div[data-baseweb="modal"] button[data-testid="stBaseButton-primary"],
-    div[data-baseweb="modal"] button[data-testid="baseButton-primary"],
-    div[data-baseweb="modal"] button[kind="primary"],
-    div[data-testid="stModal"] button[data-testid="baseButton-primary"] {
+    /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 只針對 .stButton 內的主行動按鈕 */
+    div[data-testid="stDialog"] .stButton > button,
+    div[role="dialog"] .stButton > button,
+    div[data-baseweb="modal"] .stButton > button,
+    div[data-testid="stModal"] .stButton > button {
         background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%) !important;
         border: 2px solid #7dd3fc !important;
         border-radius: 12px !important;
@@ -404,21 +394,21 @@ st.markdown("""
         overflow: hidden !important;
     }
 
-    div[data-testid="stDialog"] button *,
-    div[data-testid="stDialog"] button p,
-    div[data-testid="stDialog"] button span,
-    div[data-testid="stDialog"] button div,
-    div[role="dialog"] button *,
-    div[role="dialog"] button p,
-    div[role="dialog"] button span,
-    div[role="dialog"] button div,
-    div[data-baseweb="modal"] button *,
-    div[data-baseweb="modal"] button p,
-    div[data-baseweb="modal"] button span,
-    div[data-baseweb="modal"] button div,
-    div[data-testid="stModal"] button *,
-    div[data-testid="stModal"] button p,
-    div[data-testid="stModal"] button span {
+    div[data-testid="stDialog"] .stButton > button *,
+    div[data-testid="stDialog"] .stButton > button p,
+    div[data-testid="stDialog"] .stButton > button span,
+    div[data-testid="stDialog"] .stButton > button div,
+    div[role="dialog"] .stButton > button *,
+    div[role="dialog"] .stButton > button p,
+    div[role="dialog"] .stButton > button span,
+    div[role="dialog"] .stButton > button div,
+    div[data-baseweb="modal"] .stButton > button *,
+    div[data-baseweb="modal"] .stButton > button p,
+    div[data-baseweb="modal"] .stButton > button span,
+    div[data-baseweb="modal"] .stButton > button div,
+    div[data-testid="stModal"] .stButton > button *,
+    div[data-testid="stModal"] .stButton > button p,
+    div[data-testid="stModal"] .stButton > button span {
         color: #ffffff !important;
         font-family: var(--font-sans) !important;
         font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
@@ -428,6 +418,80 @@ st.markdown("""
         white-space: nowrap !important;
         word-break: keep-all !important;
         display: inline !important;
+    }
+
+    /* ── 還原 Dialog 關閉按鈕 (X)、SelectBox 下拉箭頭、密碼顯示切換鈕為預設樣式 ── */
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"],
+    div[data-testid="stDialog"] [data-testid="stDialogDismissButton"],
+    div[role="dialog"] [data-testid="stDialogDismissButton"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        min-height: unset !important;
+        padding: 0.25rem !important;
+        color: rgba(250, 250, 250, 0.5) !important;
+    }
+    div[data-testid="stDialog"] button[aria-label="Close"]:hover,
+    div[role="dialog"] button[aria-label="Close"]:hover,
+    div[data-testid="stDialog"] [data-testid="stDialogDismissButton"]:hover,
+    div[role="dialog"] [data-testid="stDialogDismissButton"]:hover {
+        color: rgba(250, 250, 250, 0.85) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        transform: none !important;
+    }
+    div[data-testid="stDialog"] button[aria-label="Close"] svg,
+    div[role="dialog"] button[aria-label="Close"] svg,
+    div[data-testid="stDialog"] [data-testid="stDialogDismissButton"] svg,
+    div[role="dialog"] [data-testid="stDialogDismissButton"] svg {
+        fill: currentColor !important;
+        color: inherit !important;
+        width: 1.1rem !important;
+        height: 1.1rem !important;
+        font-size: unset !important;
+        font-weight: normal !important;
+        text-shadow: none !important;
+        display: block !important;
+    }
+
+    /* SelectBox 下拉箭頭還原 */
+    div[data-testid="stSelectbox"] svg,
+    div[data-baseweb="select"] svg {
+        fill: rgba(250, 250, 250, 0.5) !important;
+        color: rgba(250, 250, 250, 0.5) !important;
+        width: 1rem !important;
+        height: 1rem !important;
+        font-size: unset !important;
+        font-weight: normal !important;
+        text-shadow: none !important;
+        display: block !important;
+    }
+
+    /* 密碼欄位顯示/隱藏切換鈕還原 */
+    div[data-testid="stTextInput"] button,
+    div[data-testid="stTextInput"] button[aria-label="Show password"],
+    div[data-testid="stTextInput"] button[aria-label="Hide password"],
+    div[data-testid="stTextInput"] button[aria-label="顯示密碼"],
+    div[data-testid="stTextInput"] button[aria-label="隱藏密碼"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        min-height: unset !important;
+        padding: 0.25rem !important;
+        color: rgba(250, 250, 250, 0.5) !important;
+    }
+    div[data-testid="stTextInput"] button:hover {
+        color: rgba(250, 250, 250, 0.85) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        transform: none !important;
+    }
+    div[data-testid="stTextInput"] button svg {
+        fill: currentColor !important;
+        color: inherit !important;
+        font-size: unset !important;
+        font-weight: normal !important;
+        text-shadow: none !important;
+        display: block !important;
     }
 
     div[data-testid="stAlert"] div, div[data-testid="stAlert"] p {
@@ -972,9 +1036,9 @@ st.markdown("""
             font-size: 1.12rem !important;
             font-weight: 600 !important;
         }
-        div[data-testid="stDialog"] button,
-        div[role="dialog"] button,
-        div[data-baseweb="modal"] button,
+        div[data-testid="stDialog"] .stButton > button,
+        div[role="dialog"] .stButton > button,
+        div[data-baseweb="modal"] .stButton > button,
         button[data-testid="stBaseButton-primary"],
         button[data-testid="baseButton-primary"],
         button[kind="primary"] {
@@ -982,9 +1046,9 @@ st.markdown("""
             white-space: nowrap !important;
             word-break: keep-all !important;
         }
-        div[data-testid="stDialog"] button *,
-        div[role="dialog"] button *,
-        div[data-baseweb="modal"] button *,
+        div[data-testid="stDialog"] .stButton > button *,
+        div[role="dialog"] .stButton > button *,
+        div[data-baseweb="modal"] .stButton > button *,
         button[data-testid="stBaseButton-primary"] *,
         button[data-testid="baseButton-primary"] *,
         button[kind="primary"] * {
@@ -1052,13 +1116,10 @@ def on_identity_dialog_dismiss():
 def identity_dialog():
     st.markdown("""
     <style>
-    /* 身分選擇視窗專屬：按鈕符號與文字顯著放大，與「我是學生、我是老師」完全同級且強制單行不折行 */
-    div[data-testid="stDialog"] button,
-    div[role="dialog"] button,
-    div[data-baseweb="modal"] button,
-    div[data-testid="stTabs"] [data-testid="stTabContent"] button,
-    div[data-testid="stTabs"] [role="tabpanel"] button,
-    .stButton > button {
+    /* 身分選擇視窗專屬：只針對 .stButton 內的主行動按鈕放大，不影響關閉鈕、下拉箭頭、密碼切換鈕 */
+    div[data-testid="stDialog"] .stButton > button,
+    div[role="dialog"] .stButton > button,
+    div[data-baseweb="modal"] .stButton > button {
         white-space: nowrap !important;
         word-break: keep-all !important;
         min-height: 52px !important;
@@ -1068,22 +1129,15 @@ def identity_dialog():
         border-radius: 12px !important;
         box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55), 0 0 22px rgba(56, 189, 248, 0.4) !important;
     }
-    div[data-testid="stDialog"] button *,
-    div[data-testid="stDialog"] button p,
-    div[data-testid="stDialog"] button span,
-    div[role="dialog"] button *,
-    div[role="dialog"] button p,
-    div[role="dialog"] button span,
-    div[data-baseweb="modal"] button *,
-    div[data-baseweb="modal"] button p,
-    div[data-baseweb="modal"] button span,
-    div[data-testid="stTabs"] [data-testid="stTabContent"] button *,
-    div[data-testid="stTabs"] [data-testid="stTabContent"] button p,
-    div[data-testid="stTabs"] [data-testid="stTabContent"] button span,
-    div[data-testid="stTabs"] [role="tabpanel"] button *,
-    div[data-testid="stTabs"] [role="tabpanel"] button p,
-    div[data-testid="stTabs"] [role="tabpanel"] button span,
-    .stButton > button * {
+    div[data-testid="stDialog"] .stButton > button *,
+    div[data-testid="stDialog"] .stButton > button p,
+    div[data-testid="stDialog"] .stButton > button span,
+    div[role="dialog"] .stButton > button *,
+    div[role="dialog"] .stButton > button p,
+    div[role="dialog"] .stButton > button span,
+    div[data-baseweb="modal"] .stButton > button *,
+    div[data-baseweb="modal"] .stButton > button p,
+    div[data-baseweb="modal"] .stButton > button span {
         color: #ffffff !important;
         font-family: var(--font-sans) !important;
         font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
