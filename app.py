@@ -275,32 +275,57 @@ st.markdown("""
     }
 
     /* ══════════════════════════════════════════════════════════════════════
-       主要與次要按鈕顯著化樣式 — 確保常態即清晰可見，拒絕幽靈按鈕
+       主要與次要按鈕顯著化樣式 — 確保常態即清晰可見，符號與字級大氣且絕不折行
        ══════════════════════════════════════════════════════════════════════ */
+    button[data-testid="stBaseButton-primary"],
     button[data-testid="baseButton-primary"],
+    button[kind="primary"],
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%) !important;
         color: #ffffff !important;
         border: 1.5px solid rgba(147, 197, 253, 0.55) !important;
         border-radius: 12px !important;
-        padding: 0.65rem 1.4rem !important;
-        font-size: var(--fluid-body) !important;
-        font-weight: 700 !important;
+        padding: 0.7rem 1.25rem !important;
+        min-height: 50px !important;
         box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), 0 0 16px rgba(2, 132, 199, 0.25) !important;
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         cursor: pointer !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow: hidden !important;
     }
 
+    button[data-testid="stBaseButton-primary"] *,
+    button[data-testid="stBaseButton-primary"] p,
+    button[data-testid="stBaseButton-primary"] span,
+    button[data-testid="stBaseButton-primary"] div,
+    button[data-testid="baseButton-primary"] *,
     button[data-testid="baseButton-primary"] p,
     button[data-testid="baseButton-primary"] span,
+    button[data-testid="baseButton-primary"] div,
+    button[kind="primary"] *,
+    button[kind="primary"] p,
+    button[kind="primary"] span,
+    button[kind="primary"] div,
+    .stButton > button[kind="primary"] *,
     .stButton > button[kind="primary"] p,
-    .stButton > button[kind="primary"] span {
+    .stButton > button[kind="primary"] span,
+    .stButton > button[kind="primary"] div {
         color: #ffffff !important;
+        font-family: var(--font-sans) !important;
+        font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
         font-weight: 700 !important;
+        letter-spacing: 0.02em !important;
+        line-height: 1.4 !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        display: inline !important;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
     }
 
+    button[data-testid="stBaseButton-primary"]:hover,
     button[data-testid="baseButton-primary"]:hover,
+    button[kind="primary"]:hover,
     .stButton > button[kind="primary"]:hover {
         background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #38bdf8 100%) !important;
         border-color: #93c5fd !important;
@@ -308,7 +333,9 @@ st.markdown("""
         transform: translateY(-1.5px) !important;
     }
 
+    button[data-testid="stBaseButton-secondary"],
     button[data-testid="baseButton-secondary"],
+    button[kind="secondary"],
     .stButton > button[kind="secondary"] {
         background: rgba(30, 41, 59, 0.9) !important;
         color: #f1f5f9 !important;
@@ -320,17 +347,29 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
+        white-space: nowrap !important;
     }
 
+    button[data-testid="stBaseButton-secondary"] *,
+    button[data-testid="stBaseButton-secondary"] p,
+    button[data-testid="stBaseButton-secondary"] span,
+    button[data-testid="baseButton-secondary"] *,
     button[data-testid="baseButton-secondary"] p,
     button[data-testid="baseButton-secondary"] span,
+    button[kind="secondary"] *,
+    button[kind="secondary"] p,
+    button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] *,
     .stButton > button[kind="secondary"] p,
     .stButton > button[kind="secondary"] span {
         color: #f1f5f9 !important;
         font-weight: 600 !important;
+        white-space: nowrap !important;
     }
 
+    button[data-testid="stBaseButton-secondary"]:hover,
     button[data-testid="baseButton-secondary"]:hover,
+    button[kind="secondary"]:hover,
     .stButton > button[kind="secondary"]:hover {
         background: rgba(51, 65, 85, 0.95) !important;
         border-color: rgba(56, 189, 248, 0.7) !important;
@@ -340,8 +379,19 @@ st.markdown("""
     }
 
     /* 浮動視窗 (Modal / Dialog) 專屬按鈕深度顯著化 — 醒目主行動按鈕，字級與頁籤完全一致且絕不折行 */
+    div[data-testid="stDialog"] button,
+    div[role="dialog"] button,
+    div[data-baseweb="modal"] button,
+    div[data-testid="stModal"] button,
+    div[data-testid="stDialog"] button[data-testid="stBaseButton-primary"],
     div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
+    div[data-testid="stDialog"] button[kind="primary"],
+    div[role="dialog"] button[data-testid="stBaseButton-primary"],
     div[role="dialog"] button[data-testid="baseButton-primary"],
+    div[role="dialog"] button[kind="primary"],
+    div[data-baseweb="modal"] button[data-testid="stBaseButton-primary"],
+    div[data-baseweb="modal"] button[data-testid="baseButton-primary"],
+    div[data-baseweb="modal"] button[kind="primary"],
     div[data-testid="stModal"] button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%) !important;
         border: 2px solid #7dd3fc !important;
@@ -350,15 +400,25 @@ st.markdown("""
         min-height: 52px !important;
         box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55), 0 0 22px rgba(56, 189, 248, 0.4) !important;
         white-space: nowrap !important;
+        word-break: keep-all !important;
         overflow: hidden !important;
     }
 
-    div[data-testid="stDialog"] button[data-testid="baseButton-primary"] p,
-    div[data-testid="stDialog"] button[data-testid="baseButton-primary"] span,
-    div[role="dialog"] button[data-testid="baseButton-primary"] p,
-    div[role="dialog"] button[data-testid="baseButton-primary"] span,
-    div[data-testid="stModal"] button[data-testid="baseButton-primary"] p,
-    div[data-testid="stModal"] button[data-testid="baseButton-primary"] span {
+    div[data-testid="stDialog"] button *,
+    div[data-testid="stDialog"] button p,
+    div[data-testid="stDialog"] button span,
+    div[data-testid="stDialog"] button div,
+    div[role="dialog"] button *,
+    div[role="dialog"] button p,
+    div[role="dialog"] button span,
+    div[role="dialog"] button div,
+    div[data-baseweb="modal"] button *,
+    div[data-baseweb="modal"] button p,
+    div[data-baseweb="modal"] button span,
+    div[data-baseweb="modal"] button div,
+    div[data-testid="stModal"] button *,
+    div[data-testid="stModal"] button p,
+    div[data-testid="stModal"] button span {
         color: #ffffff !important;
         font-family: var(--font-sans) !important;
         font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
@@ -367,6 +427,7 @@ st.markdown("""
         line-height: 1.4 !important;
         white-space: nowrap !important;
         word-break: keep-all !important;
+        display: inline !important;
     }
 
     div[data-testid="stAlert"] div, div[data-testid="stAlert"] p {
@@ -911,17 +972,25 @@ st.markdown("""
             font-size: 1.12rem !important;
             font-weight: 600 !important;
         }
-        div[data-testid="stDialog"] button[data-testid="baseButton-primary"],
-        div[role="dialog"] button[data-testid="baseButton-primary"] {
+        div[data-testid="stDialog"] button,
+        div[role="dialog"] button,
+        div[data-baseweb="modal"] button,
+        button[data-testid="stBaseButton-primary"],
+        button[data-testid="baseButton-primary"],
+        button[kind="primary"] {
             padding: 0.6rem 0.6rem !important;
             white-space: nowrap !important;
+            word-break: keep-all !important;
         }
-        div[data-testid="stDialog"] button[data-testid="baseButton-primary"] p,
-        div[data-testid="stDialog"] button[data-testid="baseButton-primary"] span,
-        div[role="dialog"] button[data-testid="baseButton-primary"] p,
-        div[role="dialog"] button[data-testid="baseButton-primary"] span {
+        div[data-testid="stDialog"] button *,
+        div[role="dialog"] button *,
+        div[data-baseweb="modal"] button *,
+        button[data-testid="stBaseButton-primary"] *,
+        button[data-testid="baseButton-primary"] *,
+        button[kind="primary"] * {
             font-size: 1.12rem !important;
             white-space: nowrap !important;
+            word-break: keep-all !important;
             letter-spacing: normal !important;
         }
     }
@@ -981,6 +1050,53 @@ def on_identity_dialog_dismiss():
 
 @st.dialog("🏛️ 請選擇操作身分", width="medium", on_dismiss=on_identity_dialog_dismiss)
 def identity_dialog():
+    st.markdown("""
+    <style>
+    /* 身分選擇視窗專屬：按鈕符號與文字顯著放大，與「我是學生、我是老師」完全同級且強制單行不折行 */
+    div[data-testid="stDialog"] button,
+    div[role="dialog"] button,
+    div[data-baseweb="modal"] button,
+    div[data-testid="stTabs"] [data-testid="stTabContent"] button,
+    div[data-testid="stTabs"] [role="tabpanel"] button,
+    .stButton > button {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        min-height: 52px !important;
+        padding: 0.72rem 1.2rem !important;
+        background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%) !important;
+        border: 2px solid #7dd3fc !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55), 0 0 22px rgba(56, 189, 248, 0.4) !important;
+    }
+    div[data-testid="stDialog"] button *,
+    div[data-testid="stDialog"] button p,
+    div[data-testid="stDialog"] button span,
+    div[role="dialog"] button *,
+    div[role="dialog"] button p,
+    div[role="dialog"] button span,
+    div[data-baseweb="modal"] button *,
+    div[data-baseweb="modal"] button p,
+    div[data-baseweb="modal"] button span,
+    div[data-testid="stTabs"] [data-testid="stTabContent"] button *,
+    div[data-testid="stTabs"] [data-testid="stTabContent"] button p,
+    div[data-testid="stTabs"] [data-testid="stTabContent"] button span,
+    div[data-testid="stTabs"] [role="tabpanel"] button *,
+    div[data-testid="stTabs"] [role="tabpanel"] button p,
+    div[data-testid="stTabs"] [role="tabpanel"] button span,
+    .stButton > button * {
+        color: #ffffff !important;
+        font-family: var(--font-sans) !important;
+        font-size: clamp(1.18rem, 0.35vw + 1.12rem, 1.32rem) !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.02em !important;
+        line-height: 1.4 !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        display: inline !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     st.markdown("歡迎來到 **國中公民思辨星系**！<br>請選擇您的操作身分以開啟專屬學習與管理空間：", unsafe_allow_html=True)
     
     tab_student_role, tab_teacher_role = st.tabs(["🎓 我是學生", "👨‍🏫 我是老師"])
