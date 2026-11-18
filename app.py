@@ -967,8 +967,7 @@ def identity_dialog():
     tab_student_role, tab_teacher_role = st.tabs(["🎓 我是學生", "👨‍🏫 我是老師"])
 
     with tab_student_role:
-        st.markdown("#### 👤 學生基本資料")
-        st.caption("請選擇您的班級與座號：")
+        st.markdown("#### 👤 請選擇您的班級與座號")
         class_options = [str(i) for i in range(801, 822)]
         seat_options = [f"{i:02d}" for i in range(1, 31)]
 
@@ -1004,9 +1003,8 @@ def identity_dialog():
             st.rerun()
 
     with tab_teacher_role:
-        st.markdown("#### 👨‍🏫 教師管理端驗證")
-        st.caption("進入教師管理中心需要確認教師本人身分：")
-        pwd = st.text_input("教師管理專屬密碼", type="password", key="dialog_teacher_pwd", placeholder="請輸入教師密碼")
+        st.markdown("#### 👨‍🏫 請輸入教師密碼")
+        pwd = st.text_input("教師密碼", type="password", key="dialog_teacher_pwd", placeholder="請輸入教師密碼", label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔑 驗證並進入教師管理端", type="primary", use_container_width=True, key="dialog_confirm_teacher"):
