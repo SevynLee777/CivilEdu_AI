@@ -718,51 +718,26 @@ st.markdown("""
         stroke: var(--galaxy-amber) !important;
     }
 
-    /* 側邊欄頂部間距緊湊化與視窗高度優化 */
-    [data-testid="stSidebar"] {
-        padding-top: 0 !important;
-        overflow-y: auto !important;
+    /* 完全移除/隱藏左側邊欄與展開控制鈕，100% 釋放完整學習頁面空間 */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarCollapsedControl"],
+    button[data-testid="baseButton-headerNoPadding"],
+    div[data-testid="collapsedControl"],
+    section[data-testid="stSidebar"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        pointer-events: none !important;
     }
-    [data-testid="stSidebar"] .block-container,
-    [data-testid="stSidebarContent"],
-    [data-testid="stSidebarUserContent"] {
-        padding-top: 1.2rem !important;
-        padding-bottom: 4rem !important;
-    }
-    [data-testid="stSidebar"] h3 {
-        font-size: var(--fluid-h4) !important;
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.3rem !important;
-        padding: 0 !important;
-        color: #95c6f4 !important;
-        font-weight: 700 !important;
-    }
-    [data-testid="stSidebar"] hr {
-        margin: 0.65rem 0 !important;
-        border-color: rgba(150, 192, 230, 0.2) !important;
-    }
-    [data-testid="stSidebar"] .stRadio > div {
-        gap: 0.25rem !important;
-    }
-    [data-testid="stSidebar"] .stRadio label p,
-    [data-testid="stSidebar"] .stRadio label span {
-        font-size: var(--fluid-body) !important;
-        color: #e2e8f0 !important;
-        line-height: 1.5 !important;
-        padding-top: 1px !important;
-        padding-bottom: 1px !important;
-    }
-    [data-testid="stSidebar"] label p,
-    [data-testid="stSidebar"] label span {
-        font-size: var(--fluid-sub) !important;
-        font-weight: 600 !important;
-        color: #cbd5e1 !important;
-        margin-bottom: 0.15rem !important;
-    }
-    [data-testid="stSidebar"] input,
-    [data-testid="stSidebar"] .stSelectbox div {
-        font-size: var(--fluid-body) !important;
-        color: #ffffff !important;
+
+    /* 主學習頁面自適應全屏佈局，移除任何側邊欄位留白 */
+    .block-container {
+        padding-top: 1.8rem !important;
+        padding-bottom: 3.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 100% !important;
     }
 
     /* BaseWeb 下拉選單浮動層 (Popover / Menu) 視覺與高度優化 */
@@ -976,36 +951,6 @@ if not all_units:
 # --- Floating Identity Dialog (Auto on entry or via switch button) ---
 if st.session_state.get("show_identity_dialog", False):
     identity_dialog()
-
-# --- Sidebar: Minimal status & switch ---
-with st.sidebar:
-    if st.session_state.user_role == "student":
-        st.markdown("### 👤 目前身分")
-        st.write(f"**班級**：{st.session_state.student_class} 班")
-        st.write(f"**座號**：{st.session_state.student_seat} 號")
-        cur_u = unit_manager.get_unit(st.session_state.current_unit_id) if st.session_state.current_unit_id else None
-        if cur_u:
-            st.caption(f"📖 當前單元：{cur_u['title']}")
-        st.markdown("---")
-        if st.button("🏛️ 切換操作身分", key="sidebar_switch_student", use_container_width=True):
-            st.session_state.show_identity_dialog = True
-            st.rerun()
-
-    elif st.session_state.user_role == "teacher":
-        st.markdown("### 👨‍🏫 教師管理功能")
-        st.info("已完成教師驗證，可於主畫面管理教材與檢視全班學習進度。")
-        st.markdown("---")
-        if st.button("🔒 登出教師 / 切換身分", key="sidebar_switch_teacher", use_container_width=True):
-            st.session_state.user_role = "none"
-            st.session_state.is_teacher_authenticated = False
-            st.session_state.show_identity_dialog = True
-            st.rerun()
-    else:
-        st.markdown("### 🏛️ 操作身分")
-        st.info("尚未選定操作身分。")
-        if st.button("🏛️ 開啟身分選擇視窗", key="sidebar_open_modal", type="primary", use_container_width=True):
-            st.session_state.show_identity_dialog = True
-            st.rerun()
 
 # ══════════════════════════════════════════════
 # 🏛️ 主畫面渲染路由 (Main Content Routing)

@@ -14,6 +14,7 @@
 | **學生免填姓名** | 移除學生基本資料中的「姓名」輸入欄位，僅保留「班級」與「座號」下拉選單；保護校園學生隱私，免去手機/平板鍵盤輸入摩擦。 | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`logger_utils.py`](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) |
 | **身分選擇浮動視窗化** | 將身分切換改為 `@st.dialog` 原生浮動視窗，登入時自動彈出；整合學生與教師分頁，側邊欄預設收合不佔據首頁空間。 | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) |
 | **主頁頂部單元控制列** | 將「📚 選擇學習單元」由側邊欄移至主頁面正上方，搭配「🏛️ 切換身分」快速按鈕，直覺切換學習單元。 | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) |
+| **左側邊欄完全移除** | 徹底移除 `st.sidebar` 區塊與展開箭頭控制鈕（CSS `display: none !important`），主頁面 100% 全屏展開無干擾。 | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py) |
 | **完成選定即刻啟航** | 學生確認身分後自動載入預設單元，直接開啟完整學習頁面（含四大模組分頁），不再停滯於導引提示畫面。 | [`app.py`](file:///C:/Users/awen8/CivilEdu_AI/app.py)<br>[`README.md`](file:///C:/Users/awen8/CivilEdu_AI/README.md) |
 | **歷程鍵值向後相容** | 調整 `get_student_key` 格式為 `班級_座號`，並在 `load_student_record` 內建歷史紀錄相容機制，舊生作答足跡完全不流失。 | [`logger_utils.py`](file:///C:/Users/awen8/CivilEdu_AI/logger_utils.py) |
 
