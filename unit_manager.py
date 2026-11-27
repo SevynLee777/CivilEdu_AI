@@ -16,6 +16,7 @@ import pdfplumber
 import struct
 import olefile
 import storage
+import tutor_cache
 
 load_dotenv()
 
@@ -29,10 +30,57 @@ CANDIDATE_MODELS = [
     'gemini-flash-lite-latest'
 ]
 
+# AI 助教的回答短、不需要深度推理：先用 Flash-Lite（較便宜，限額通常也較寬鬆）
+TUTOR_MODELS = [
+    'gemini-flash-lite-latest',
+    'gemini-2.5-flash',
+    'gemini-3.5-flash',
+    'gemini-flash-latest'
+]
+
 # 模型暫時忙碌或超過流量時先重試，再換下一個模型
 RETRYABLE_STATUS = {429, 500, 503}
 MAX_ATTEMPTS_PER_MODEL = 2
 RETRY_DELAY_SECONDS = 3
+# 429 要求等待的秒數超過此值就直接換模型，不原地空等
+MAX_RETRY_WAIT_SECONDS = 20
+
+# 輸出 token 上限（思考 token 也算在內）。單元包要出 16 題 JSON，需要較大的空間
+OUTPUT_TOKENS_BUNDLE = 16384
+OUTPUT_TOKENS_REMEDIATION = 4096
+OUTPUT_TOKENS_TUTOR = 1500
+
+# 出題與助教回答都不需要長時間「思考」；思考 token 會算進用量與費用
+# 不接受思考設定的模型（回 400）會記在這裡，之後改成不送
+_NO_THINKING_CONFIG = set()
+
+def _thinking_config(model):
+    if model in _NO_THINKING_CONFIG:
+        return None
+    if model.startswith('gemini-2.5'):
+        return types.ThinkingConfig(thinking_budget=0)
+    return types.ThinkingConfig(thinking_level='low')
+
+def _quota_info(err):
+    """從 429 回應讀出 (建議等待秒數, 是否為每日額度用完)。讀不到時回傳 (None, False)。"""
+    details = getattr(err, "details", None)
+    if not isinstance(details, dict):
+        return None, False
+    error = details.get("error", details)
+    retry_delay, daily = None, False
+    for d in error.get("details") or []:
+        if not isinstance(d, dict):
+            continue
+        d_type = d.get("@type", "")
+        if d_type.endswith("RetryInfo"):
+            m = re.match(r"([\d.]+)s", str(d.get("retryDelay", "")))
+            if m:
+                retry_delay = float(m.group(1))
+        elif d_type.endswith("QuotaFailure"):
+            for v in d.get("violations") or []:
+                if "PerDay" in str(v.get("quotaId", "")):
+                    daily = True
+    return retry_delay, daily
 
 def get_api_key():
     key = os.getenv("GEMINI_API_KEY")
@@ -44,8 +92,12 @@ def get_api_key():
             pass
     return key
 
-def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300):
-    """呼叫 Gemini；attempt_timeout 為單次等待秒數，total_timeout 為含重試與換模型的總上限。"""
+def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300,
+                    models=None, max_output_tokens=None):
+    """呼叫 Gemini；attempt_timeout 為單次等待秒數，total_timeout 為含重試與換模型的總上限。
+
+    models 為依序嘗試的模型（預設 CANDIDATE_MODELS）；max_output_tokens 為輸出上限（含思考 token）。
+    """
     api_key = get_api_key()
     if not api_key:
         raise ValueError("未設定 GEMINI_API_KEY，無法呼叫 Gemini API。")
@@ -53,14 +105,18 @@ def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=30
     client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=attempt_timeout * 1000))
     deadline = time.monotonic() + total_timeout
     errors = []
-    config = types.GenerateContentConfig(
-        response_mime_type="application/json"
-    ) if is_json else None
 
-    for m_name in CANDIDATE_MODELS:
-        for attempt in range(MAX_ATTEMPTS_PER_MODEL):
+    for m_name in models or CANDIDATE_MODELS:
+        thinking = _thinking_config(m_name)
+        attempt = 0
+        while attempt < MAX_ATTEMPTS_PER_MODEL:
             if time.monotonic() > deadline:
                 raise Exception("等待 AI 回覆逾時：" + "；".join(errors))
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json" if is_json else None,
+                max_output_tokens=max_output_tokens,
+                thinking_config=thinking
+            )
             try:
                 res = client.models.generate_content(
                     model=m_name,
@@ -69,13 +125,38 @@ def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=30
                 )
                 if res.text:
                     return res.text
-                errors.append(f"{m_name}: 回傳內容為空")
+                reason = res.candidates[0].finish_reason if res.candidates else "無候選回覆"
+                errors.append(f"{m_name}: 回傳內容為空（{reason}）")
                 break
             except Exception as e:
+                code = getattr(e, "code", None)
+                # 完整錯誤印到 log，才看得出是哪一種額度（每分鐘／每日／token）用完
+                print(f"[Gemini] {m_name} 呼叫失敗：{e}")
                 errors.append(f"{m_name}: {str(e)[:100]}")
-                if getattr(e, "code", None) not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS_PER_MODEL - 1:
+
+                if code == 400 and thinking is not None:
+                    # 這個模型不接受思考設定，改成不送再試一次（不計入重試次數）
+                    _NO_THINKING_CONFIG.add(m_name)
+                    thinking = None
+                    continue
+                if code not in RETRYABLE_STATUS:
                     break
-                time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+                attempt += 1
+                if attempt >= MAX_ATTEMPTS_PER_MODEL:
+                    break
+
+                wait = RETRY_DELAY_SECONDS * attempt
+                if code == 429:
+                    retry_delay, daily = _quota_info(e)
+                    if daily:
+                        break  # 這個模型今天的額度已用完，原地重試沒有用
+                    if retry_delay is not None:
+                        wait = retry_delay
+                    if wait > MAX_RETRY_WAIT_SECONDS:
+                        break
+                if time.monotonic() + wait > deadline:
+                    break
+                time.sleep(wait)
 
     raise Exception("所有 Gemini 模型呼叫失敗：" + "；".join(errors))
 
@@ -352,7 +433,7 @@ def fill_missing_remediation(bundle, title, raw_content):
 }}
 """
         try:
-            data = extract_json(call_gemini_api(prompt, is_json=True))
+            data = extract_json(call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_REMEDIATION))
             if isinstance(data, dict):
                 for tag in missing:
                     guide = data.get(tag)
@@ -573,7 +654,7 @@ def generate_unit_bundle(title, raw_content):
 """
     fallback_reason = "AI 回傳的內容格式不完整"
     try:
-        raw_output = call_gemini_api(prompt, is_json=True)
+        raw_output = call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_BUNDLE)
         data = extract_json(raw_output)
         if data and "key_points" in data and "practice_questions" in data:
             still_missing = fill_missing_remediation(data, title, raw_content)
@@ -1593,8 +1674,15 @@ def ask_ai_tutor(question, unit_title, unit_content):
 2. 用 1~2 個貼近國中生校園生活或日常生活的超白話生動比喻解惑。
 3. 條列清晰，避免生硬死板的法律術語，讓國中生一秒看懂！
 """
+    cached = tutor_cache.get(unit_title, unit_content, question)
+    if cached:
+        return cached
     try:
-        return call_gemini_api(prompt, attempt_timeout=45, total_timeout=75)
+        answer = call_gemini_api(prompt, attempt_timeout=45, total_timeout=75,
+                                 models=TUTOR_MODELS, max_output_tokens=OUTPUT_TOKENS_TUTOR)
+        if answer:
+            tutor_cache.put(unit_title, unit_content, question, answer)
+        return answer
     except Exception as e:
         print(f"[Warning] AI tutor exception: {e}")
         return None
