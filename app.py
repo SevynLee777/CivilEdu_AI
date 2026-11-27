@@ -13,6 +13,7 @@ import html
 import re
 import random
 import copy
+import time
 from dotenv import load_dotenv
 
 # 強制重載自訂模組，徹底解決 Streamlit Cloud 熱重載時使用舊模組快取問題
@@ -35,10 +36,17 @@ def run_tutor_job(job, student_info, unit_title, unit_content):
     finally:
         job["done"] = True
 
+# 收到回答後，同一位學生要等幾秒才能再問，避免全班連續提問很快用完 Gemini 每分鐘額度
+TUTOR_COOLDOWN_SECONDS = 15
+
 def queue_tutor_question(input_key, student_info, unit):
     """送出提問：一次只處理一題，在背景開始回答。"""
     question = st.session_state.get(input_key, "").strip()
     current_job = st.session_state.get("tutor_job")
+    wait = int(st.session_state.get("tutor_ready_at", 0) - time.time()) + 1
+    if question and not current_job and wait > 0:
+        st.session_state.tutor_notice = f"⏳ 先想想剛剛的回答吧！{wait} 秒後就可以再問下一題，問題會留在輸入框。"
+        return
     if question and not current_job:
         job = {"unit_id": unit["id"], "question": question, "answer": None, "log_saved": True, "done": False}
         st.session_state.tutor_job = job
@@ -64,6 +72,7 @@ def collect_tutor_answer(unit_id):
         job = st.session_state.tutor_job = None
     if job and job["done"]:
         if job["answer"]:
+            st.session_state.tutor_ready_at = time.time() + TUTOR_COOLDOWN_SECONDS
             st.session_state.chat_history.append((job["question"], job["answer"]))
             if not job["log_saved"]:
                 st.session_state.tutor_notice = "⚠️ 這次的提問紀錄沒有存到：學習紀錄系統暫時連不上。AI 助教的回答不受影響。"
