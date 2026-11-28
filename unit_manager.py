@@ -23,19 +23,19 @@ load_dotenv()
 DB_FILE = os.path.join(os.path.dirname(__file__), "units_db.json")
 
 # Candidate models for fallback
+# 2026/11 實測：gemini-flash-latest、gemini-flash-lite-latest 已不存在；
+# gemini-2.5-* 對新申請的 Key 回 404（舊 Key 可能仍可用，留作備援）
 CANDIDATE_MODELS = [
-    'gemini-2.5-flash',
     'gemini-3.5-flash',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest'
+    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite'
 ]
 
-# AI 助教的回答短、不需要深度推理：先用 Flash-Lite（較便宜，限額通常也較寬鬆）
+# AI 助教的回答短、不需要深度推理：先用 Flash-Lite（實測約 3～5 秒、不耗思考 token）
 TUTOR_MODELS = [
-    'gemini-flash-lite-latest',
-    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
-    'gemini-flash-latest'
+    'gemini-2.5-flash'
 ]
 
 # 模型暫時忙碌或超過流量時先重試，再換下一個模型
@@ -48,18 +48,64 @@ MAX_RETRY_WAIT_SECONDS = 20
 # 輸出 token 上限（思考 token 也算在內）。單元包要出 16 題 JSON，需要較大的空間
 OUTPUT_TOKENS_BUNDLE = 16384
 OUTPUT_TOKENS_REMEDIATION = 4096
-OUTPUT_TOKENS_TUTOR = 1500
+# 助教回答實測約 600～800 token；thinking_level=low 時 3.5-flash 仍會思考約 1000 token，
+# 1500 會被截斷，所以留足空間
+OUTPUT_TOKENS_TUTOR = 4096
 
 # 出題與助教回答都不需要長時間「思考」；思考 token 會算進用量與費用
 # 不接受思考設定的模型（回 400）會記在這裡，之後改成不送
 _NO_THINKING_CONFIG = set()
+# 不接受 JSON Schema 的模型（回 400）會記在這裡
+_NO_RESPONSE_SCHEMA = set()
 
-def _thinking_config(model):
+def _thinking_config(model, level):
     if model in _NO_THINKING_CONFIG:
         return None
     if model.startswith('gemini-2.5'):
         return types.ThinkingConfig(thinking_budget=0)
-    return types.ThinkingConfig(thinking_level='low')
+    return types.ThinkingConfig(thinking_level=level)
+
+_REMEDIATION_GUIDE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "concept": {"type": "string"},
+        "simple_explanation": {"type": "string"},
+        "life_case": {"type": "string"},
+        "pitfall_tip": {"type": "string"},
+    },
+    "required": ["concept", "simple_explanation", "life_case", "pitfall_tip"],
+}
+
+# 單元包的 JSON 結構。只用 response_mime_type 時，模型常沒把心智圖 A["文字"] 的雙引號跳脫，
+# 整份 JSON 解析失敗而退回預設範本（2026/11 實測連續重現）；加上 Schema 可確保輸出合法 JSON
+UNIT_BUNDLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "key_points": {"type": "array", "items": {"type": "string"}},
+        "easy_content": {"type": "string"},
+        "life_cases": {"type": "array", "items": {
+            "type": "object",
+            "properties": {"title": {"type": "string"}, "story": {"type": "string"}, "takeaway": {"type": "string"}},
+            "required": ["title", "story", "takeaway"],
+        }},
+        "mindmap_mermaid": {"type": "string"},
+        "practice_questions": {"type": "array", "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "concept_tag": {"type": "string"},
+                "question": {"type": "string"},
+                "options": {"type": "array", "items": {"type": "string"}},
+                "correct_index": {"type": "integer"},
+                "explanation": {"type": "string"},
+            },
+            "required": ["id", "concept_tag", "question", "options", "correct_index", "explanation"],
+        }},
+        "remediation_guides": {"type": "object", "additionalProperties": _REMEDIATION_GUIDE_SCHEMA},
+    },
+    "required": ["key_points", "easy_content", "life_cases", "mindmap_mermaid",
+                 "practice_questions", "remediation_guides"],
+}
 
 def _quota_info(err):
     """從 429 回應讀出 (建議等待秒數, 是否為每日額度用完)。讀不到時回傳 (None, False)。"""
@@ -93,10 +139,11 @@ def get_api_key():
     return key
 
 def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300,
-                    models=None, max_output_tokens=None):
+                    models=None, max_output_tokens=None, thinking_level='low', response_schema=None):
     """呼叫 Gemini；attempt_timeout 為單次等待秒數，total_timeout 為含重試與換模型的總上限。
 
-    models 為依序嘗試的模型（預設 CANDIDATE_MODELS）；max_output_tokens 為輸出上限（含思考 token）。
+    models 為依序嘗試的模型（預設 CANDIDATE_MODELS）；max_output_tokens 為輸出上限（含思考 token）；
+    thinking_level 用於 Gemini 3 系列（minimal／low…）；response_schema 為 JSON Schema（需搭配 is_json）。
     """
     api_key = get_api_key()
     if not api_key:
@@ -107,13 +154,15 @@ def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=30
     errors = []
 
     for m_name in models or CANDIDATE_MODELS:
-        thinking = _thinking_config(m_name)
+        thinking = _thinking_config(m_name, thinking_level)
+        schema = response_schema if is_json and m_name not in _NO_RESPONSE_SCHEMA else None
         attempt = 0
         while attempt < MAX_ATTEMPTS_PER_MODEL:
             if time.monotonic() > deadline:
                 raise Exception("等待 AI 回覆逾時：" + "；".join(errors))
             config = types.GenerateContentConfig(
                 response_mime_type="application/json" if is_json else None,
+                response_json_schema=schema,
                 max_output_tokens=max_output_tokens,
                 thinking_config=thinking
             )
@@ -134,10 +183,14 @@ def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=30
                 print(f"[Gemini] {m_name} 呼叫失敗：{e}")
                 errors.append(f"{m_name}: {str(e)[:100]}")
 
+                # 400 可能是這個模型不接受選用設定：依序拿掉思考設定、JSON Schema 再試（不計入重試次數）
                 if code == 400 and thinking is not None:
-                    # 這個模型不接受思考設定，改成不送再試一次（不計入重試次數）
                     _NO_THINKING_CONFIG.add(m_name)
                     thinking = None
+                    continue
+                if code == 400 and schema is not None:
+                    _NO_RESPONSE_SCHEMA.add(m_name)
+                    schema = None
                     continue
                 if code not in RETRYABLE_STATUS:
                     break
@@ -183,7 +236,20 @@ def extract_json(text):
         except Exception:
             pass
 
+    # 最後補救：心智圖字串內未跳脫的雙引號（A["文字"]）是最常見的壞 JSON 原因
+    repaired = _escape_mermaid_quotes(match.group(1) if match else text)
+    try:
+        return json.loads(repaired, strict=False)
+    except Exception:
+        pass
+
     return None
+
+def _escape_mermaid_quotes(text):
+    """把 "mindmap_mermaid": "..." 字串值裡未跳脫的雙引號補上反斜線。"""
+    def fix(m):
+        return m.group(1) + re.sub(r'(?<!\\)"', r'\\"', m.group(2)) + m.group(3)
+    return re.sub(r'("mindmap_mermaid"\s*:\s*")(.*?)("\s*(?:,\s*\n\s*"|\n\s*\}))', fix, text, flags=re.DOTALL)
 
 def extract_text_from_doc_bytes(file_bytes):
     """
@@ -433,7 +499,9 @@ def fill_missing_remediation(bundle, title, raw_content):
 }}
 """
         try:
-            data = extract_json(call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_REMEDIATION))
+            data = extract_json(call_gemini_api(
+                prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_REMEDIATION,
+                response_schema={"type": "object", "additionalProperties": _REMEDIATION_GUIDE_SCHEMA}))
             if isinstance(data, dict):
                 for tag in missing:
                     guide = data.get(tag)
@@ -469,7 +537,7 @@ def generate_unit_bundle(title, raw_content):
 2. 小試身手題庫池請出滿 16 道生活情境單選題（q1 至 q16），讓系統每次可動態隨機抽取 8 題測驗，題題精彩。
 3. 題目的 concept_tag 請歸納成 4～6 個核心觀念，由多道題共用，不要每題各用一個標籤；同一個標籤的文字必須完全相同。
 4. remediation_guides 必須為題目中出現的「每一個」concept_tag 各寫一項，key 要與 concept_tag 一字不差，不可遺漏（下方 JSON 範例只示意格式，項數請依實際標籤數）。
-5. mindmap_mermaid 必須是簡潔的純樹狀圖（graph LR）：中心節點連到 3～5 個主題，每個主題再連 2～3 個重點，節點總數不超過 15 個。每個節點只能有一條連入的線，不可跨分支連線，不可使用 subgraph；節點文字不超過 12 字，一律寫成 代號["文字"] 的格式。
+5. mindmap_mermaid 必須是簡潔的純樹狀圖（graph LR）：中心節點連到 3～5 個主題，每個主題再連 2～3 個重點，節點總數不超過 15 個。每個節點只能有一條連入的線，不可跨分支連線，不可使用 subgraph；節點文字不超過 12 字，一律寫成 代號["文字"] 的格式；放進 JSON 字串時雙引號必須跳脫成 \\"（例如 A[\\"國家\\"]），否則整份 JSON 會壞掉。
 
 【課本教材原文】：
 {raw_content[:12000]}
@@ -505,7 +573,7 @@ def generate_unit_bundle(title, raw_content):
       "takeaway": "💡 思辨焦點：一句話總結。"
     }}
   ],
-  "mindmap_mermaid": "graph LR\\n  A[\"{title}\"] --> B[\"核心概念一\"]\\n  A --> C[\"核心概念二\"]\\n  B --> D[\"生活實例/重點細節\"]\\n  C --> E[\"生活實例/重點細節\"]",
+  "mindmap_mermaid": "graph LR\\n  A[\\\"{title}\\\"] --> B[\\\"核心概念一\\\"]\\n  A --> C[\\\"核心概念二\\\"]\\n  B --> D[\\\"生活實例/重點細節\\\"]\\n  C --> E[\\\"生活實例/重點細節\\\"]",
   "practice_questions": [
     {{
       "id": "q1",
@@ -654,7 +722,8 @@ def generate_unit_bundle(title, raw_content):
 """
     fallback_reason = "AI 回傳的內容格式不完整"
     try:
-        raw_output = call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_BUNDLE)
+        raw_output = call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_BUNDLE,
+                                     response_schema=UNIT_BUNDLE_SCHEMA)
         data = extract_json(raw_output)
         if data and "key_points" in data and "practice_questions" in data:
             still_missing = fill_missing_remediation(data, title, raw_content)
@@ -1673,13 +1742,15 @@ def ask_ai_tutor(question, unit_title, unit_content):
 1. 語氣溫暖鼓勵、親切活潑。
 2. 用 1~2 個貼近國中生校園生活或日常生活的超白話生動比喻解惑。
 3. 條列清晰，避免生硬死板的法律術語，讓國中生一秒看懂！
+4. 用詞親切但文雅，不使用粗話、罵人或嘲諷的字眼。
 """
     cached = tutor_cache.get(unit_title, unit_content, question)
     if cached:
         return cached
     try:
         answer = call_gemini_api(prompt, attempt_timeout=45, total_timeout=75,
-                                 models=TUTOR_MODELS, max_output_tokens=OUTPUT_TOKENS_TUTOR)
+                                 models=TUTOR_MODELS, max_output_tokens=OUTPUT_TOKENS_TUTOR,
+                                 thinking_level='minimal')
         if answer:
             tutor_cache.put(unit_title, unit_content, question, answer)
         return answer
