@@ -36,7 +36,7 @@ def run_tutor_job(job, student_info, unit_title, unit_content):
     finally:
         job["done"] = True
 
-# 收到回答後，同一位學生要等幾秒才能再問，避免全班連續提問很快用完 Gemini 每分鐘額度
+# 收到回答後，同一位學生要等幾秒才能再問，避免全班連續提問很快用完 AI 每分鐘額度
 TUTOR_COOLDOWN_SECONDS = 15
 
 def queue_tutor_question(input_key, student_info, unit):
@@ -90,7 +90,7 @@ def queue_fallback_notice(unit):
     reason = unit.get("_fallback_reason")
     if reason:
         queue_unit_notice("warning", f"⚠️ AI 未能根據教材生成內容（原因：{reason}），此單元暫時使用預設範本。"
-                                     "請確認 GEMINI_API_KEY 設定後，於「✏️ 修改教材」勾選 AI 重新生成。")
+                                     "請確認 OPENAI_API_KEY 或 GEMINI_API_KEY 設定（及 OpenAI 額度）後，於「✏️ 修改教材」勾選 AI 重新生成。")
     note = unit.get("_generation_note")
     if note:
         queue_unit_notice("warning", f"⚠️ {note}可於「✏️ 修改教材」勾選 AI 重新生成。")

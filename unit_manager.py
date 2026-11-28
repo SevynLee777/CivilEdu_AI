@@ -38,8 +38,21 @@ TUTOR_MODELS = [
     'gemini-2.5-flash'
 ]
 
+# OpenAI 模型（2026/11 依組織可用清單挑選）。設定 OPENAI_API_KEY 後預設優先使用 OpenAI，
+# 失敗或額度用完時自動改用 Gemini；可用 LLM_PROVIDER=openai／gemini 指定優先順序
+OPENAI_MODELS = [
+    'gpt-5.4-mini',
+    'gpt-5-mini',
+    'gpt-4.1-mini'
+]
+OPENAI_TUTOR_MODELS = [
+    'gpt-5.4-nano',
+    'gpt-5.4-mini',
+    'gpt-4.1-mini'
+]
+
 # 模型暫時忙碌或超過流量時先重試，再換下一個模型
-RETRYABLE_STATUS = {429, 500, 503}
+RETRYABLE_STATUS = {429, 500, 502, 503}
 MAX_ATTEMPTS_PER_MODEL = 2
 RETRY_DELAY_SECONDS = 3
 # 429 要求等待的秒數超過此值就直接換模型，不原地空等
@@ -128,15 +141,19 @@ def _quota_info(err):
                     daily = True
     return retry_delay, daily
 
-def get_api_key():
-    key = os.getenv("GEMINI_API_KEY")
-    if not key:
+def get_setting(name):
+    """依序從環境變數（.env）與 Streamlit secrets 讀取設定。"""
+    value = os.getenv(name)
+    if not value:
         try:
             import streamlit as st
-            key = st.secrets.get("GEMINI_API_KEY")
+            value = st.secrets.get(name)
         except Exception:
             pass
-    return key
+    return value
+
+def get_api_key():
+    return get_setting("GEMINI_API_KEY")
 
 def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300,
                     models=None, max_output_tokens=None, thinking_level='low', response_schema=None):
@@ -212,6 +229,203 @@ def call_gemini_api(prompt, is_json=False, attempt_timeout=180, total_timeout=30
                 time.sleep(wait)
 
     raise Exception("所有 Gemini 模型呼叫失敗：" + "；".join(errors))
+
+# ── OpenAI ───────────────────────────────────────────
+
+# 不接受 reasoning 設定的模型（如 gpt-4.1 系列）；不接受 strict JSON Schema 的模型
+_NO_REASONING = set()
+_NO_STRICT_SCHEMA = set()
+
+def _openai_schema(schema):
+    """轉成 OpenAI strict 格式：每個物件都要列出全部欄位並禁止額外欄位；
+    鍵名不固定的物件（additionalProperties 為 schema）改成 [{"key": ..., ...}] 陣列。"""
+    t = schema.get("type")
+    if t == "object" and isinstance(schema.get("additionalProperties"), dict):
+        inner = _openai_schema(schema["additionalProperties"])
+        return {"type": "array", "items": {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "原本 JSON 物件的 key，請依提示的規則填寫（例如與 concept_tag 一字不差）"},
+                **inner["properties"]},
+            "required": ["key", *inner["required"]],
+            "additionalProperties": False,
+        }}
+    if t == "object":
+        props = {k: _openai_schema(v) for k, v in schema.get("properties", {}).items()}
+        return {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}
+    if t == "array":
+        return {"type": "array", "items": _openai_schema(schema["items"])}
+    return dict(schema)
+
+def _restore_maps(data, schema):
+    """把 _openai_schema 轉成陣列的部分還原成原本的 {key: {...}} 物件。"""
+    t = schema.get("type")
+    if t == "object" and isinstance(schema.get("additionalProperties"), dict):
+        if not isinstance(data, list):
+            return data
+        restored = {}
+        for item in data:
+            if isinstance(item, dict) and item.get("key"):
+                item = dict(item)
+                key = item.pop("key")
+                restored[key] = _restore_maps(item, schema["additionalProperties"])
+        return restored
+    if t == "object" and isinstance(data, dict):
+        props = schema.get("properties", {})
+        return {k: _restore_maps(v, props[k]) if k in props else v for k, v in data.items()}
+    if t == "array" and isinstance(data, list):
+        return [_restore_maps(x, schema["items"]) for x in data]
+    return data
+
+def _is_map_schema(schema):
+    return schema.get("type") == "object" and isinstance(schema.get("additionalProperties"), dict)
+
+def _lowest_supported_effort(message):
+    """從 400 錯誤訊息（Supported values are: 'none', 'low', ...）挑出最省的 reasoning 等級。"""
+    supported = re.findall(r"'(\w+)'", message.split("Supported values are:", 1)[-1]) if "Supported values are:" in message else []
+    for level in ("none", "minimal", "low"):
+        if level in supported:
+            return level
+    return None
+
+def call_openai_api(prompt, is_json=False, attempt_timeout=180, total_timeout=300,
+                    models=None, max_output_tokens=None, reasoning_effort='low', response_schema=None):
+    """呼叫 OpenAI Responses API；重試、換模型、逾時規則與 call_gemini_api 相同。"""
+    api_key = get_setting("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("未設定 OPENAI_API_KEY，無法呼叫 OpenAI API。")
+    import openai
+
+    client = openai.OpenAI(api_key=api_key, organization=get_setting("OPENAI_ORG_ID") or None,
+                           timeout=attempt_timeout, max_retries=0)
+    deadline = time.monotonic() + total_timeout
+    errors = []
+
+    for m_name in models or OPENAI_MODELS:
+        effort = None if m_name in _NO_REASONING else reasoning_effort
+        strict = bool(is_json and response_schema) and m_name not in _NO_STRICT_SCHEMA
+        attempt = 0
+        while attempt < MAX_ATTEMPTS_PER_MODEL:
+            if time.monotonic() > deadline:
+                raise Exception("等待 AI 回覆逾時：" + "；".join(errors))
+            kwargs = {"model": m_name, "input": prompt}
+            if max_output_tokens:
+                kwargs["max_output_tokens"] = max_output_tokens
+            if effort:
+                kwargs["reasoning"] = {"effort": effort}
+            if strict:
+                schema = _openai_schema(response_schema)
+                if _is_map_schema(response_schema):  # strict 模式的最外層必須是物件
+                    schema = {"type": "object", "properties": {"entries": schema},
+                              "required": ["entries"], "additionalProperties": False}
+                kwargs["text"] = {"format": {"type": "json_schema", "name": "result", "schema": schema, "strict": True}}
+            elif is_json:
+                kwargs["text"] = {"format": {"type": "json_object"}}
+            try:
+                res = client.responses.create(**kwargs)
+                text = res.output_text
+                if res.status == "incomplete":
+                    reason = getattr(res.incomplete_details, "reason", None)
+                    errors.append(f"{m_name}: 回覆不完整（{reason}）")
+                    break
+                if not text:
+                    errors.append(f"{m_name}: 回傳內容為空")
+                    break
+                if strict:
+                    data = json.loads(text)
+                    if _is_map_schema(response_schema):
+                        data = data.get("entries", [])
+                    text = json.dumps(_restore_maps(data, response_schema), ensure_ascii=False)
+                return text
+            except Exception as e:
+                code = getattr(e, "status_code", None)
+                # 未儲值時實測為 type="insufficient_quota"、code="credit_balance_exhausted"
+                quota_flags = {getattr(e, "code", None), getattr(e, "type", None)}
+                message = str(e)
+                if getattr(e, "param", None):
+                    message += f"（param={e.param}）"
+                print(f"[OpenAI] {m_name} 呼叫失敗：{message}")
+                errors.append(f"{m_name}: {message[:100]}")
+
+                # 400 可能是這個模型不接受選用設定：調整 reasoning 等級、拿掉 reasoning、改用一般 JSON 模式再試
+                if code == 400 and effort and "reasoning" in message.lower():
+                    lower = _lowest_supported_effort(message)
+                    if lower and lower != effort:
+                        effort = lower
+                    else:
+                        _NO_REASONING.add(m_name)
+                        effort = None
+                    continue
+                if code == 400 and strict:
+                    _NO_STRICT_SCHEMA.add(m_name)
+                    strict = False
+                    continue
+                if quota_flags & {"insufficient_quota", "credit_balance_exhausted", "billing_hard_limit_reached"}:
+                    # 組織額度用完（未儲值），換模型也沒用
+                    raise Exception("OpenAI 額度不足（請到 platform.openai.com 儲值）：" + "；".join(errors))
+                if code not in RETRYABLE_STATUS:
+                    break
+                attempt += 1
+                if attempt >= MAX_ATTEMPTS_PER_MODEL:
+                    break
+
+                wait = RETRY_DELAY_SECONDS * attempt
+                if code == 429:
+                    headers = getattr(getattr(e, "response", None), "headers", None) or {}
+                    try:
+                        if headers.get("retry-after-ms"):
+                            wait = float(headers["retry-after-ms"]) / 1000
+                        elif headers.get("retry-after"):
+                            wait = float(headers["retry-after"])
+                    except ValueError:
+                        pass
+                    if wait > MAX_RETRY_WAIT_SECONDS:
+                        break
+                if time.monotonic() + wait > deadline:
+                    break
+                time.sleep(wait)
+
+    raise Exception("所有 OpenAI 模型呼叫失敗：" + "；".join(errors))
+
+# ── 統一入口 ──────────────────────────────────────────
+
+def _provider_order():
+    """回傳依序嘗試的服務（只含有設定 Key 的）。未指定 LLM_PROVIDER 時，有 OpenAI Key 就優先用 OpenAI。"""
+    has_openai = bool(get_setting("OPENAI_API_KEY"))
+    has_gemini = bool(get_api_key())
+    preferred = (get_setting("LLM_PROVIDER") or "").strip().lower()
+    order = ["gemini", "openai"] if preferred == "gemini" or (not preferred and not has_openai) else ["openai", "gemini"]
+    return [p for p in order if (has_openai if p == "openai" else has_gemini)]
+
+def call_llm(prompt, is_json=False, attempt_timeout=180, total_timeout=300, task="general",
+             max_output_tokens=None, response_schema=None):
+    """呼叫語言模型：依 _provider_order 嘗試，前一家失敗就換下一家。
+
+    task="tutor" 用回答快、不思考的小模型；其他用出題品質較好的模型。
+    """
+    providers = _provider_order()
+    if not providers:
+        raise ValueError("未設定 OPENAI_API_KEY 或 GEMINI_API_KEY，無法呼叫 AI。")
+    tutor = task == "tutor"
+    errors = []
+    for provider in providers:
+        try:
+            if provider == "openai":
+                return call_openai_api(
+                    prompt, is_json=is_json, attempt_timeout=attempt_timeout, total_timeout=total_timeout,
+                    models=OPENAI_TUTOR_MODELS if tutor else OPENAI_MODELS,
+                    max_output_tokens=max_output_tokens, response_schema=response_schema,
+                    reasoning_effort='none' if tutor else 'low')
+            return call_gemini_api(
+                prompt, is_json=is_json, attempt_timeout=attempt_timeout, total_timeout=total_timeout,
+                models=TUTOR_MODELS if tutor else CANDIDATE_MODELS,
+                max_output_tokens=max_output_tokens, response_schema=response_schema,
+                thinking_level='minimal' if tutor else 'low')
+        except Exception as e:
+            errors.append(str(e))
+            if provider != providers[-1]:
+                print(f"[LLM] {provider} 失敗，改用下一個服務：{str(e)[:200]}")
+    raise Exception("；".join(errors))
 
 def extract_json(text):
     """Extracts and parses JSON from model output safely."""
@@ -499,7 +713,7 @@ def fill_missing_remediation(bundle, title, raw_content):
 }}
 """
         try:
-            data = extract_json(call_gemini_api(
+            data = extract_json(call_llm(
                 prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_REMEDIATION,
                 response_schema={"type": "object", "additionalProperties": _REMEDIATION_GUIDE_SCHEMA}))
             if isinstance(data, dict):
@@ -722,8 +936,8 @@ def generate_unit_bundle(title, raw_content):
 """
     fallback_reason = "AI 回傳的內容格式不完整"
     try:
-        raw_output = call_gemini_api(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_BUNDLE,
-                                     response_schema=UNIT_BUNDLE_SCHEMA)
+        raw_output = call_llm(prompt, is_json=True, max_output_tokens=OUTPUT_TOKENS_BUNDLE,
+                              response_schema=UNIT_BUNDLE_SCHEMA)
         data = extract_json(raw_output)
         if data and "key_points" in data and "practice_questions" in data:
             still_missing = fill_missing_remediation(data, title, raw_content)
@@ -1748,9 +1962,8 @@ def ask_ai_tutor(question, unit_title, unit_content):
     if cached:
         return cached
     try:
-        answer = call_gemini_api(prompt, attempt_timeout=45, total_timeout=75,
-                                 models=TUTOR_MODELS, max_output_tokens=OUTPUT_TOKENS_TUTOR,
-                                 thinking_level='minimal')
+        answer = call_llm(prompt, attempt_timeout=45, total_timeout=75, task="tutor",
+                          max_output_tokens=OUTPUT_TOKENS_TUTOR)
         if answer:
             tutor_cache.put(unit_title, unit_content, question, answer)
         return answer

@@ -140,11 +140,15 @@ CivilEdu_AI/
 pip install -r requirements.txt
 ```
 
-### 2. 設定 Google Gemini API Key
-可於系統環境變數或 `.streamlit/secrets.toml` 設定：
+### 2. 設定 AI API Key（OpenAI 與／或 Google Gemini）
+可於 `.env`、系統環境變數或 `.streamlit/secrets.toml` 設定，至少設定其中一家：
 ```bash
-export GEMINI_API_KEY="您的_GEMINI_API_KEY"
+OPENAI_API_KEY="您的_OPENAI_API_KEY"      # sk-proj- 開頭；組織需先儲值
+OPENAI_ORG_ID="org-..."                   # 選填：指定計費的組織
+GEMINI_API_KEY="您的_GEMINI_API_KEY"
+LLM_PROVIDER="openai"                     # 選填：openai 或 gemini，指定優先使用哪一家
 ```
+兩家都設定時，預設優先使用 OpenAI；失敗或額度用完時自動改用 Gemini。
 
 ### 3. 啟動應用程式
 ```bash
