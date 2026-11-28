@@ -7,3 +7,4 @@ pyzipper
 pdfplumber
 requests
 beautifulsoup4
+openai
